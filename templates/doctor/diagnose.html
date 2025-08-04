@@ -1,0 +1,524 @@
+{% extends 'doctor/layout/index.html'%}
+{% block title %} 
+Diagnosis
+{% endblock %}
+{% block style%}
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            #generated-report, #generated-report * {
+                visibility: visible;
+            }
+            
+            #generated-report {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 20px;
+                background: white;
+            }
+            #print-report-btn, #download-report-btn {
+                display: none !important;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+        }
+{% endblock %}
+
+{% block content %}
+
+  <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">AI-Powered Disease Diagnosis</h1>
+                <p class="text-gray-600">Select disease type, upload patient images, and get AI-powered diagnosis with comprehensive reports</p>
+            </div>
+        </div>
+
+        <!-- Disease Selection -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Select Disease Type for Diagnosis</h2>
+                    <p class="text-sm text-gray-600 mt-1">Choose the disease you want to diagnose using our trained AI models</p>
+                </div>
+
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Pneumonia -->
+                        <div class="disease-card border-2 border-gray-200 rounded-lg p-6 cursor-pointer hover:border-blue-500 transition-colors" data-disease="pneumonia">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-lungs text-blue-600 text-2xl"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Pneumonia</h3>
+                                <p class="text-sm text-gray-600 mb-4">Lower respiratory infection affecting the lungs</p>
+                                <div class="space-y-2 text-xs text-gray-500">
+                                    <p>• Chest X-Ray analysis</p>
+                                    <p>• Respiratory symptoms</p>
+                                    <p>• Infection detection</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tuberculosis -->
+                        <div class="disease-card border-2 border-gray-200 rounded-lg p-6 cursor-pointer hover:border-green-500 transition-colors" data-disease="tuberculosis">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-bacteria text-green-600 text-2xl"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Tuberculosis (TB)</h3>
+                                <p class="text-sm text-gray-600 mb-4">Bacterial infection affecting the lungs</p>
+                                <div class="space-y-2 text-xs text-gray-500">
+                                    <p>• Chest X-Ray analysis</p>
+                                    <p>• TB-specific patterns</p>
+                                    <p>• Cavity detection</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Skin Cancer -->
+                        <div class="disease-card border-2 border-gray-200 rounded-lg p-6 cursor-pointer hover:border-purple-500 transition-colors" data-disease="melanoma">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-user-md text-purple-600 text-2xl"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Skin Cancer (Melanoma)</h3>
+                                <p class="text-sm text-gray-600 mb-4">Malignant skin lesion detection</p>
+                                <div class="space-y-2 text-xs text-gray-500">
+                                    <p>• Skin lesion analysis</p>
+                                    <p>• Melanoma detection</p>
+                                    <p>• Dermatological imaging</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diagnosis Form -->
+        <div id="diagnosis-form-container" class="px-4 py-6 sm:px-0 hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Patient Information & Image Upload</h2>
+                    <p class="text-sm text-gray-600 mt-1">Diagnosing: <span id="selected-disease" class="font-semibold text-blue-600"></span></p>
+                </div>
+                
+                <form id="diagnosis-form" class="p-6">
+                    <!-- Patient Details -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Patient Name</label>
+                                <input type="text" id="patient-name" name="patient-name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Patient Age</label>
+                                <input type="number" id="patient-age" name="patient-age" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                                <select id="patient-gender" name="patient-gender" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select Gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                            <input type="tel" id="patient-phone" name="patient-phone" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Disease-Specific Information -->
+                    <div id="disease-specific-info" class="mb-6">
+                        <!-- This will be populated based on selected disease -->
+                            </div>
+                            
+                    <!-- Image Upload Section -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload Medical Images</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="upload-area">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-2">Drag and drop images here, or click to select files</p>
+                            <p id="image-requirements" class="text-sm text-gray-500">Supports: X-Ray, MRI, CT Scan, Ultrasound, Skin Images</p>
+                            <input type="file" id="image-upload" multiple accept="image/*" class="hidden">
+                            <button type="button" onclick="document.getElementById('image-upload').click()" 
+                                    class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                Select Images
+                            </button>
+                            </div>
+
+                        <!-- Image Preview -->
+                        <div id="image-preview" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 hidden">
+                            <!-- Preview images will be added here -->
+                        </div>
+                    </div>
+
+
+                            
+                    <!-- Generate Report Button -->
+                    <div class="flex justify-end">
+                        <button type="submit" id="generate-report-btn" 
+                                class="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 flex items-center">
+                            <i class="fas fa-file-medical mr-2"></i>
+                                                         Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Generated Report -->
+        <div id="generated-report" class="px-4 py-6 sm:px-0 hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Generated Medical Report</h2>
+                </div>
+                
+                <div class="p-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-center justify-between">
+                                <div>
+                                <h3 class="text-lg font-semibold text-blue-900">Report ID</h3>
+                                <p id="report-id" class="text-2xl font-bold text-blue-600">Loading...</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-blue-700">Generated on</p>
+                                <p id="report-date" class="text-sm text-blue-700">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- Patient Information Row -->
+                        <div>
+                            <h3 class="font-medium text-gray-900 mb-2">Patient Information</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div><strong>Name:</strong> <span id="report-patient-name">-</span></div>
+                                    <div><strong>Age:</strong> <span id="report-patient-age">-</span></div>
+                                    <div><strong>Gender:</strong> <span id="report-patient-gender">-</span></div>
+                                    <div><strong>Contact:</strong> <span id="report-patient-phone">-</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disease Information Row -->
+                        <div>
+                            <h3 class="font-medium text-gray-900 mb-2">Disease Information</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div><strong>Disease Type:</strong> <span id="report-disease-type">-</span></div>
+                                    <div><strong>Confidence Level:</strong> <span id="report-confidence">-</span></div>
+                                </div>
+                                <div>
+                                    <strong>Disease Summary:</strong>
+                                    <div id="report-disease-summary" class="mt-2 text-gray-900 text-sm leading-relaxed">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Uploaded Images Row -->
+                        <div>
+                            <h3 class="font-medium text-gray-900 mb-2">Uploaded Images</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div id="report-uploaded-images" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <!-- Images will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between items-center">
+                    <div>
+                            <p class="text-sm text-gray-600">Use report ID for consultation</p>
+                        </div>
+                        <div class="flex space-x-3">
+                            <button id="print-report-btn" 
+                                    class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center">
+                                <i class="fas fa-print mr-2"></i>
+                                Print Report
+                            </button>
+                            <button id="download-report-btn" 
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
+                                <i class="fas fa-download mr-2"></i>
+                                Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedDisease = '';
+        let currentAnalysis = null;
+        let uploadedImages = []; // Store uploaded images for report
+
+        // Disease-specific data and analysis results
+        const diseaseData = {
+            pneumonia: {
+                name: 'Pneumonia',
+                icon: 'fas fa-lungs',
+                color: 'blue',
+                imageRequirements: 'Chest X-Ray images recommended',
+                symptoms: ['Cough', 'Fever', 'Difficulty breathing', 'Chest pain', 'Fatigue'],
+                diseaseSummary: 'Pneumonia is an infection that inflames the air sacs in one or both lungs. The air sacs may fill with fluid or pus, causing cough with phlegm or pus, fever, chills, and difficulty breathing. It can be caused by bacteria, viruses, or fungi. Community-acquired pneumonia is the most common type and typically responds well to antibiotic treatment.',
+                analysis: {
+                    primaryDiagnosis: 'Community-Acquired Pneumonia',
+                    confidence: 87,
+                    detectedConditions: [
+                        'Lower respiratory infection',
+                        'Pulmonary infiltrates',
+                        'Pleural effusion'
+                    ],
+                    keyFindings: [
+                        'Bilateral lung opacities',
+                        'Increased bronchovascular markings',
+                        'Small pleural effusion on right side'
+                    ],
+                    treatmentSuggestions: [
+                        'Antibiotic therapy (Amoxicillin-Clavulanate)',
+                        'Chest physiotherapy',
+                        'Oxygen therapy if needed',
+                        'Follow-up chest X-ray in 2 weeks'
+                    ],
+                    severity: 'Moderate'
+                }
+            },
+            tuberculosis: {
+                name: 'Tuberculosis (TB)',
+                icon: 'fas fa-bacteria',
+                color: 'green',
+                imageRequirements: 'Chest X-Ray images for TB detection',
+                symptoms: ['Persistent cough', 'Night sweats', 'Weight loss', 'Fatigue', 'Chest pain'],
+                diseaseSummary: 'Tuberculosis is a serious infectious disease that mainly affects the lungs. It is caused by the bacterium Mycobacterium tuberculosis and spreads through the air when people with active TB cough, sneeze, or spit. TB can also affect other parts of the body. The disease requires a long course of antibiotics and can be fatal if not treated properly.',
+                analysis: {
+                    primaryDiagnosis: 'Pulmonary Tuberculosis',
+                    confidence: 89,
+                    detectedConditions: [
+                        'Mycobacterium tuberculosis infection',
+                        'Pulmonary cavities',
+                        'Fibrotic changes'
+                    ],
+                    keyFindings: [
+                        'Upper lobe infiltrates',
+                        'Cavitary lesions',
+                        'Fibrotic scarring',
+                        'Pleural thickening'
+                    ],
+                    treatmentSuggestions: [
+                        'Multi-drug therapy (Rifampin, Isoniazid, Pyrazinamide, Ethambutol)',
+                        'Directly Observed Therapy (DOT)',
+                        'Regular sputum monitoring',
+                        'Contact tracing and screening'
+                    ],
+                    severity: 'Moderate to Severe'
+                }
+            },
+            melanoma: {
+                name: 'Skin Cancer (Melanoma)',
+                icon: 'fas fa-user-md',
+                color: 'purple',
+                imageRequirements: 'High-resolution skin lesion images',
+                symptoms: ['Irregular mole', 'Color changes', 'Size increase', 'Itching', 'Bleeding'],
+                diseaseSummary: 'Melanoma is the most serious type of skin cancer that develops from melanocytes, the cells that produce melanin. It can develop anywhere on the body and is often characterized by changes in existing moles or the appearance of new, unusual-looking growths. Early detection is crucial as melanoma can spread to other parts of the body if not treated promptly.',
+                analysis: {
+                    primaryDiagnosis: 'Suspicious Melanoma',
+                    confidence: 94,
+                    detectedConditions: [
+                        'Atypical melanocytic proliferation',
+                        'Asymmetric lesion',
+                        'Irregular borders'
+                    ],
+                    keyFindings: [
+                        'Asymmetrical lesion shape',
+                        'Irregular border patterns',
+                        'Color variation within lesion',
+                        'Diameter > 6mm'
+                    ],
+                    treatmentSuggestions: [
+                        'Surgical excision with wide margins',
+                        'Sentinel lymph node biopsy',
+                        'Dermatological follow-up',
+                        'Regular skin surveillance'
+                    ],
+                    severity: 'High Risk'
+                }
+            }
+        };
+
+        // Handle disease selection
+        document.querySelectorAll('.disease-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove active state from all cards
+                document.querySelectorAll('.disease-card').forEach(c => {
+                    c.classList.remove('border-blue-500', 'border-green-500', 'border-purple-500');
+                    c.classList.add('border-gray-200');
+                });
+                
+                // Add active state to selected card
+                const disease = this.dataset.disease;
+                const diseaseInfo = diseaseData[disease];
+                selectedDisease = disease;
+                
+                this.classList.remove('border-gray-200');
+                this.classList.add(`border-${diseaseInfo.color}-500`);
+                
+                // Show diagnosis form
+                document.getElementById('diagnosis-form-container').classList.remove('hidden');
+                document.getElementById('selected-disease').textContent = diseaseInfo.name;
+                
+                // Update image requirements
+                document.getElementById('image-requirements').textContent = diseaseInfo.imageRequirements;
+                
+                // Populate disease-specific information
+                populateDiseaseSpecificInfo(disease);
+                
+                // Scroll to form
+                document.getElementById('diagnosis-form-container').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Populate disease-specific information
+        function populateDiseaseSpecificInfo(disease) {
+            const diseaseInfo = diseaseData[disease];
+            const container = document.getElementById('disease-specific-info');
+            
+            container.innerHTML = `
+                <div class="bg-${diseaseInfo.color}-50 border border-${diseaseInfo.color}-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-${diseaseInfo.color}-900 mb-3">${diseaseInfo.name} Diagnosis</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">Common Symptoms</h4>
+                            <ul class="space-y-1">
+                                ${diseaseInfo.symptoms.map(symptom => 
+                                    `<li class="flex items-center text-sm text-gray-700">
+                                        <i class="fas fa-check-circle text-${diseaseInfo.color}-600 mr-2"></i>
+                                        ${symptom}
+                                    </li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">Image Requirements</h4>
+                            <p class="text-sm text-gray-700">${diseaseInfo.imageRequirements}</p>
+                            <div class="mt-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${diseaseInfo.color}-100 text-${diseaseInfo.color}-800">
+                                    AI Model: ${diseaseInfo.name}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Handle file upload
+        document.getElementById('image-upload').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+            preview.classList.remove('hidden');
+            uploadedImages = []; // Reset uploaded images
+
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    uploadedImages.push(imageData); // Store image for report
+                    
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <img src="${imageData}" class="w-full h-32 object-cover rounded-lg">
+                        <button type="button" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle form submission - Generate report directly
+        document.getElementById('diagnosis-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!selectedDisease) {
+                alert('Please select a disease type first.');
+                return;
+            }
+
+            // Get analysis data for selected disease
+            currentAnalysis = diseaseData[selectedDisease].analysis;
+            
+            // Generate report immediately
+            generateReport();
+        });
+
+        // Generate report function
+        function generateReport() {
+            const reportId = 'SNAP' + Date.now();
+            const currentDate = new Date().toLocaleDateString();
+            
+            // Populate report
+            document.getElementById('report-id').textContent = reportId;
+            document.getElementById('report-date').textContent = currentDate;
+            document.getElementById('report-patient-name').textContent = document.getElementById('patient-name').value;
+            document.getElementById('report-patient-age').textContent = document.getElementById('patient-age').value;
+            document.getElementById('report-patient-gender').textContent = document.getElementById('patient-gender').value;
+            document.getElementById('report-patient-phone').textContent = document.getElementById('patient-phone').value;
+            document.getElementById('report-disease-type').textContent = diseaseData[selectedDisease].name;
+            document.getElementById('report-confidence').textContent = currentAnalysis.confidence + '%';
+            document.getElementById('report-disease-summary').textContent = diseaseData[selectedDisease].diseaseSummary;
+
+            // Populate uploaded images
+            const reportImagesContainer = document.getElementById('report-uploaded-images');
+            if (uploadedImages.length > 0) {
+                reportImagesContainer.innerHTML = uploadedImages.map((imageData, index) => `
+                    <div class="text-center">
+                        <img src="${imageData}" class="w-full h-24 object-cover rounded-lg mb-2" alt="Medical Image ${index + 1}">
+                        <p class="text-xs text-gray-600">Image ${index + 1}</p>
+                    </div>
+                `).join('');
+            } else {
+                reportImagesContainer.innerHTML = '<p class="text-gray-500 text-sm">No images uploaded</p>';
+            }
+
+            // Show generated report
+            document.getElementById('generated-report').classList.remove('hidden');
+            
+            // Scroll to report
+            document.getElementById('generated-report').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Print report
+        document.getElementById('print-report-btn').addEventListener('click', function() {
+            window.print();
+        });
+
+        // Download report
+        document.getElementById('download-report-btn').addEventListener('click', function() {
+            alert('PDF download functionality would be implemented here');
+        });
+    </script>
+{% endblock %}

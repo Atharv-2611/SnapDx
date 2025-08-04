@@ -1,0 +1,439 @@
+{% extends 'doctor/layout/index.html' %}
+{% block title %} Chat {% endblock %}
+{% block content %}
+    <!-- Chat Interface -->
+    <div class="flex h-full pt-16">
+        <!-- Patient List Sidebar -->
+        <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Patients</h2>
+                <div class="mt-2">
+                    <input type="text" id="patient-search" placeholder="Search patients..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <div class="divide-y divide-gray-200" id="patient-list">
+                    <!-- Patient list items will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                            <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium text-gray-900" id="chat-patient-name">Select a patient to start chatting</h3>
+                            <p class="text-sm text-gray-500" id="chat-patient-status">Online</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-6" id="messages-container">
+                <div class="text-center text-gray-500 mt-8">
+                    <i class="fas fa-comments text-4xl mb-4"></i>
+                    <p>Select a patient from the sidebar to start a conversation</p>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <div class="bg-white border-t border-gray-200 px-6 py-4">
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <div class="flex-1">
+                        <input type="text" id="message-input" placeholder="Type your message..." 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                               disabled>
+                    </div>
+                    <button id="send-button" class="p-2 text-gray-400 hover:text-gray-600" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const realtimeDb = firebase.database();
+
+        // Current user data
+        let currentUser = null;
+        let currentPatientId = null;
+        let patients = [];
+        let unsubscribeMessages = null;
+
+        // Initialize the chat
+        async function initializeChat() {
+            try {
+                // For demo purposes, we'll use a mock doctor user
+                // In production, you'd implement proper authentication
+                currentUser = {
+                    id: 'doctor_001',
+                    name: 'Dr. Smith',
+                    type: 'doctor',
+                    email: 'doctor@snapdx.com'
+                };
+                
+                document.getElementById('doctor-name').textContent = currentUser.name;
+                
+                // Load patients
+                await loadPatients();
+                
+                // Set up real-time presence
+                setupPresence();
+                
+            } catch (error) {
+                console.error('Error initializing chat:', error);
+            }
+        }
+
+        // Load patients from Firestore
+        async function loadPatients() {
+            try {
+                const patientsRef = db.collection('users').where('type', '==', 'patient');
+                const snapshot = await patientsRef.get();
+                
+                patients = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    lastMessage: '',
+                    time: '',
+                    unread: 0
+                }));
+
+                // Load last messages for each patient
+                for (let patient of patients) {
+                    await loadLastMessage(patient.id);
+                }
+
+                populatePatientList();
+            } catch (error) {
+                console.error('Error loading patients:', error);
+            }
+        }
+
+        // Load last message for a patient
+        async function loadLastMessage(patientId) {
+            try {
+                const chatId = getChatId(currentUser.id, patientId);
+                const messagesRef = db.collection('chats').doc(chatId).collection('messages')
+                    .orderBy('timestamp', 'desc')
+                    .limit(1);
+                
+                const snapshot = await messagesRef.get();
+                if (!snapshot.empty) {
+                    const lastMessage = snapshot.docs[0].data();
+                    const patient = patients.find(p => p.id === patientId);
+                    if (patient) {
+                        patient.lastMessage = lastMessage.text;
+                        patient.time = formatTime(lastMessage.timestamp);
+                        patient.unread = await getUnreadCount(patientId);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading last message:', error);
+            }
+        }
+
+        // Get unread message count
+        async function getUnreadCount(patientId) {
+            try {
+                const chatId = getChatId(currentUser.id, patientId);
+                const messagesRef = db.collection('chats').doc(chatId).collection('messages')
+                    .where('read', '==', false)
+                    .where('senderId', '==', patientId);
+                
+                const snapshot = await messagesRef.get();
+                return snapshot.size;
+            } catch (error) {
+                console.error('Error getting unread count:', error);
+                return 0;
+            }
+        }
+
+        // Get chat ID (consistent between doctor and patient)
+        function getChatId(user1Id, user2Id) {
+            const sortedIds = [user1Id, user2Id].sort();
+            return `${sortedIds[0]}_${sortedIds[1]}`;
+        }
+
+        // Setup real-time presence
+        function setupPresence() {
+            const presenceRef = realtimeDb.ref('presence');
+            
+            // Update presence when user comes online
+            const userPresenceRef = presenceRef.child(currentUser.id);
+            userPresenceRef.set({
+                online: true,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                type: currentUser.type
+            });
+
+            // Update presence when user goes offline
+            window.addEventListener('beforeunload', () => {
+                userPresenceRef.set({
+                    online: false,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                    type: currentUser.type
+                });
+            });
+        }
+
+        // Populate patient list
+        function populatePatientList() {
+            const patientList = document.getElementById('patient-list');
+            patientList.innerHTML = patients.map(patient => `
+                <div class="p-4 hover:bg-gray-50 cursor-pointer border-l-4 border-transparent ${patient.id === currentPatientId ? 'border-blue-500 bg-blue-50' : ''}" 
+                     onclick="selectPatient('${patient.id}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-blue-600">${patient.name ? patient.name.charAt(0) : 'P'}</span>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">${patient.name || 'Unknown Patient'}</p>
+                                <p class="text-sm text-gray-500">${patient.lastMessage || 'No messages yet'}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <p class="text-xs text-gray-500">${patient.time || ''}</p>
+                            ${patient.unread > 0 ? `<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">${patient.unread}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center mt-2">
+                        <div class="w-2 h-2 rounded-full ${patient.online ? 'bg-green-400' : 'bg-gray-400'}"></div>
+                        <span class="text-xs text-gray-500 ml-2">${patient.online ? 'Online' : 'Offline'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select patient and load chat
+        async function selectPatient(patientId) {
+            currentPatientId = patientId;
+            const patient = patients.find(p => p.id === patientId);
+            
+            // Update patient list styling
+            populatePatientList();
+            
+            // Update chat header
+            document.getElementById('chat-patient-name').textContent = patient.name || 'Unknown Patient';
+            document.getElementById('chat-patient-status').textContent = patient.online ? 'Online' : 'Offline';
+            
+            // Enable message input
+            document.getElementById('message-input').disabled = false;
+            document.getElementById('send-button').disabled = false;
+            
+            // Load messages
+            await loadMessages(patientId);
+            
+            // Mark messages as read
+            await markMessagesAsRead(patientId);
+        }
+
+        // Load chat messages
+        async function loadMessages(patientId) {
+            try {
+                // Unsubscribe from previous listener
+                if (unsubscribeMessages) {
+                    unsubscribeMessages();
+                }
+
+                const chatId = getChatId(currentUser.id, patientId);
+                const messagesRef = db.collection('chats').doc(chatId).collection('messages')
+                    .orderBy('timestamp', 'asc');
+
+                // Set up real-time listener
+                unsubscribeMessages = messagesRef.onSnapshot((snapshot) => {
+                    const messages = [];
+                    snapshot.forEach((doc) => {
+                        messages.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+
+                    displayMessages(messages);
+                });
+
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Display messages
+        function displayMessages(messages) {
+            const messagesContainer = document.getElementById('messages-container');
+            
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center text-gray-500 mt-8">
+                        <i class="fas fa-comments text-4xl mb-4"></i>
+                        <p>No messages yet. Start the conversation!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            messagesContainer.innerHTML = messages.map(message => `
+                <div class="flex ${message.senderId === currentUser.id ? 'justify-end' : 'justify-start'} mb-4">
+                    <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        message.senderId === currentUser.id 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-200 text-gray-900'
+                    }">
+                        <p class="text-sm">${message.text}</p>
+                        <p class="text-xs ${message.senderId === currentUser.id ? 'text-blue-100' : 'text-gray-500'} mt-1">${formatTime(message.timestamp)}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message || !currentPatientId) return;
+            
+            try {
+                const chatId = getChatId(currentUser.id, currentPatientId);
+                const messageData = {
+                    text: message,
+                    senderId: currentUser.id,
+                    senderName: currentUser.name,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    read: false
+                };
+
+                await db.collection('chats').doc(chatId).collection('messages').add(messageData);
+                
+                // Clear input
+                input.value = '';
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message. Please try again.');
+            }
+        }
+
+        // Mark messages as read
+        async function markMessagesAsRead(patientId) {
+            try {
+                const chatId = getChatId(currentUser.id, patientId);
+                const messagesRef = db.collection('chats').doc(chatId).collection('messages')
+                    .where('read', '==', false)
+                    .where('senderId', '==', patientId);
+                
+                const snapshot = await messagesRef.get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach((doc) => {
+                    batch.update(doc.ref, { read: true });
+                });
+                
+                await batch.commit();
+                
+                // Update unread count in patient list
+                const patient = patients.find(p => p.id === patientId);
+                if (patient) {
+                    patient.unread = 0;
+                    populatePatientList();
+                }
+                
+            } catch (error) {
+                console.error('Error marking messages as read:', error);
+            }
+        }
+
+        // Format timestamp
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Search patients
+        function searchPatients() {
+            const searchTerm = document.getElementById('patient-search').value.toLowerCase();
+            const filteredPatients = patients.filter(patient => 
+                patient.name.toLowerCase().includes(searchTerm)
+            );
+            
+            const patientList = document.getElementById('patient-list');
+            patientList.innerHTML = filteredPatients.map(patient => `
+                <div class="p-4 hover:bg-gray-50 cursor-pointer border-l-4 border-transparent ${patient.id === currentPatientId ? 'border-blue-500 bg-blue-50' : ''}" 
+                     onclick="selectPatient('${patient.id}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-blue-600">${patient.name ? patient.name.charAt(0) : 'P'}</span>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">${patient.name || 'Unknown Patient'}</p>
+                                <p class="text-sm text-gray-500">${patient.lastMessage || 'No messages yet'}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <p class="text-xs text-gray-500">${patient.time || ''}</p>
+                            ${patient.unread > 0 ? `<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">${patient.unread}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center mt-2">
+                        <div class="w-2 h-2 rounded-full ${patient.online ? 'bg-green-400' : 'bg-gray-400'}"></div>
+                        <span class="text-xs text-gray-500 ml-2">${patient.online ? 'Online' : 'Offline'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Event listeners
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        document.getElementById('patient-search').addEventListener('input', searchPatients);
+
+        // Initialize
+        initializeChat();
+    </script>
+
+{% endblock %}

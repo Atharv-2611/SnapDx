@@ -1,0 +1,455 @@
+{% extends 'doctor/layout/index.html'%} {% block title %} Diagnosis {% endblock
+%} {% block content %}
+<!-- Main Content -->
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+  <!-- Header -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h1 class="text-3xl font-bold text-gray-900 mb-4">How SnapDx Works</h1>
+      <p class="text-lg text-gray-600">
+        Understanding our AI-powered diagnostic platform and how it enhances
+        your medical practice
+      </p>
+    </div>
+  </div>
+
+  <!-- Process Overview -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">
+        The Diagnostic Process
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div
+            class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4"
+          >
+            <i class="fas fa-user-md text-blue-600 text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">
+            1. Patient Assessment
+          </h3>
+          <p class="text-gray-600">
+            Enter patient information, symptoms, and medical history through our
+            intuitive interface
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div
+            class="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mb-4"
+          >
+            <i class="fas fa-brain text-green-600 text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">2. AI Analysis</h3>
+          <p class="text-gray-600">
+            Our advanced AI algorithms analyze symptoms and medical data to
+            generate accurate diagnoses
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div
+            class="mx-auto h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mb-4"
+          >
+            <i class="fas fa-clipboard-check text-purple-600 text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">
+            3. Results & Recommendations
+          </h3>
+          <p class="text-gray-600">
+            Receive comprehensive diagnosis results with confidence scores and
+            treatment recommendations
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Technology -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">
+        AI Technology Behind SnapDx
+      </h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            Machine Learning Models
+          </h3>
+          <ul class="space-y-3">
+            <li class="flex items-start">
+              <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+              <span class="text-gray-700"
+                >Trained on millions of medical cases and symptoms</span
+              >
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+              <span class="text-gray-700"
+                >Continuous learning from new data and outcomes</span
+              >
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+              <span class="text-gray-700"
+                >Multi-modal analysis including text, images, and lab
+                results</span
+              >
+            </li>
+            <li class="flex items-start">
+              <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+              <span class="text-gray-700"
+                >Real-time updates based on latest medical research</span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            Accuracy & Reliability
+          </h3>
+          <div class="space-y-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-blue-900"
+                  >Overall Accuracy</span
+                >
+                <span class="text-2xl font-bold text-blue-600">94.2%</span>
+              </div>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-green-900"
+                  >Sensitivity</span
+                >
+                <span class="text-2xl font-bold text-green-600">96.8%</span>
+              </div>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-purple-900"
+                  >Specificity</span
+                >
+                <span class="text-2xl font-bold text-purple-600">91.5%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features for Doctors -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">
+        Features Designed for Healthcare Professionals
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center mb-3">
+            <i class="fas fa-stethoscope text-blue-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-medium text-gray-900">Smart Diagnosis</h3>
+          </div>
+          <p class="text-gray-600">
+            AI-powered diagnostic assistance with differential diagnoses and
+            confidence scores
+          </p>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center mb-3">
+            <i class="fas fa-users text-green-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-medium text-gray-900">
+              Patient Management
+            </h3>
+          </div>
+          <p class="text-gray-600">
+            Comprehensive patient records, history tracking, and follow-up
+            management
+          </p>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center mb-3">
+            <i class="fas fa-comments text-purple-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-medium text-gray-900">Secure Messaging</h3>
+          </div>
+          <p class="text-gray-600">
+            HIPAA-compliant patient communication with real-time chat
+            functionality
+          </p>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center mb-3">
+            <i class="fas fa-chart-line text-yellow-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-medium text-gray-900">
+              Analytics & Insights
+            </h3>
+          </div>
+          <p class="text-gray-600">
+            Practice analytics, diagnosis patterns, and performance metrics
+          </p>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center mb-3">
+            <i class="fas fa-mobile-alt text-red-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-medium text-gray-900">Mobile Access</h3>
+          </div>
+          <p class="text-gray-600">
+            Access patient data and perform diagnoses from anywhere, anytime
+          </p>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center mb-3">
+            <i class="fas fa-shield-alt text-indigo-600 text-xl mr-3"></i>
+            <h3 class="text-lg font-medium text-gray-900">
+              Security & Compliance
+            </h3>
+          </div>
+          <p class="text-gray-600">
+            Enterprise-grade security with HIPAA, GDPR, and SOC 2 compliance
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Getting Started -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">Getting Started</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">For New Users</h3>
+          <ol class="space-y-3">
+            <li class="flex items-start">
+              <span
+                class="flex-shrink-0 h-6 w-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3"
+                >1</span
+              >
+              <span class="text-gray-700"
+                >Complete your profile and medical credentials
+                verification</span
+              >
+            </li>
+            <li class="flex items-start">
+              <span
+                class="flex-shrink-0 h-6 w-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3"
+                >2</span
+              >
+              <span class="text-gray-700"
+                >Review our training materials and best practices</span
+              >
+            </li>
+            <li class="flex items-start">
+              <span
+                class="flex-shrink-0 h-6 w-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3"
+                >3</span
+              >
+              <span class="text-gray-700"
+                >Start with a few test cases to familiarize yourself</span
+              >
+            </li>
+            <li class="flex items-start">
+              <span
+                class="flex-shrink-0 h-6 w-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium mr-3"
+                >4</span
+              >
+              <span class="text-gray-700"
+                >Begin using SnapDx in your daily practice</span
+              >
+            </li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            Support & Resources
+          </h3>
+          <div class="space-y-3">
+            <a
+              href="#"
+              class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <i class="fas fa-book text-blue-600 mr-3"></i>
+              <span class="text-gray-700">User Manual & Documentation</span>
+            </a>
+            <a
+              href="#"
+              class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <i class="fas fa-video text-green-600 mr-3"></i>
+              <span class="text-gray-700">Training Videos & Webinars</span>
+            </a>
+            <a
+              href="#"
+              class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <i class="fas fa-headset text-purple-600 mr-3"></i>
+              <span class="text-gray-700">24/7 Technical Support</span>
+            </a>
+            <a
+              href="#"
+              class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <i class="fas fa-users text-yellow-600 mr-3"></i>
+              <span class="text-gray-700">Community Forum</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Section -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">
+        Frequently Asked Questions
+      </h2>
+
+      <div class="space-y-4">
+        <div class="border border-gray-200 rounded-lg">
+          <button
+            class="w-full px-4 py-3 text-left focus:outline-none"
+            onclick="toggleFAQ(this)"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-gray-900"
+                >How accurate is the AI diagnosis?</span
+              >
+              <i class="fas fa-chevron-down text-gray-500"></i>
+            </div>
+          </button>
+          <div class="px-4 pb-3 hidden">
+            <p class="text-gray-600">
+              Our AI achieves 94.2% overall accuracy, with 96.8% sensitivity and
+              91.5% specificity. The system is continuously updated with new
+              medical data and validated by medical professionals.
+            </p>
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg">
+          <button
+            class="w-full px-4 py-3 text-left focus:outline-none"
+            onclick="toggleFAQ(this)"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-gray-900"
+                >Is patient data secure and HIPAA compliant?</span
+              >
+              <i class="fas fa-chevron-down text-gray-500"></i>
+            </div>
+          </button>
+          <div class="px-4 pb-3 hidden">
+            <p class="text-gray-600">
+              Yes, SnapDx is fully HIPAA compliant with enterprise-grade
+              security. All data is encrypted in transit and at rest, with
+              regular security audits and SOC 2 compliance.
+            </p>
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg">
+          <button
+            class="w-full px-4 py-3 text-left focus:outline-none"
+            onclick="toggleFAQ(this)"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-gray-900"
+                >Can I integrate SnapDx with my existing EMR system?</span
+              >
+              <i class="fas fa-chevron-down text-gray-500"></i>
+            </div>
+          </button>
+          <div class="px-4 pb-3 hidden">
+            <p class="text-gray-600">
+              Yes, SnapDx offers API integration with major EMR systems
+              including Epic, Cerner, and others. Our team can help set up
+              seamless integration with your existing workflow.
+            </p>
+          </div>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg">
+          <button
+            class="w-full px-4 py-3 text-left focus:outline-none"
+            onclick="toggleFAQ(this)"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-gray-900"
+                >What if I disagree with the AI diagnosis?</span
+              >
+              <i class="fas fa-chevron-down text-gray-500"></i>
+            </div>
+          </button>
+          <div class="px-4 pb-3 hidden">
+            <p class="text-gray-600">
+              SnapDx is designed to assist, not replace, medical judgment. You
+              always have the final say in diagnosis and treatment. The AI
+              provides suggestions and confidence scores to support your
+              decision-making.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <div class="px-4 py-6 sm:px-0">
+    <div class="bg-blue-600 rounded-lg shadow p-8 text-center">
+      <h2 class="text-2xl font-bold text-white mb-4">
+        Ready to Transform Your Practice?
+      </h2>
+      <p class="text-blue-100 mb-6">
+        Join thousands of healthcare professionals using SnapDx to improve
+        patient care and diagnostic accuracy
+      </p>
+      <div class="space-x-4">
+        <a
+          href="{{url_for('doctor_diagnose')}}"
+          class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50"
+        >
+          Start Diagnosing
+        </a>
+        <a
+          href="#"
+          class="inline-flex items-center px-6 py-3 border border-white text-base font-medium rounded-md text-white hover:bg-blue-700"
+        >
+          Schedule Demo
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleFAQ(button) {
+    const content = button.nextElementSibling;
+    const icon = button.querySelector("i");
+
+    if (content.classList.contains("hidden")) {
+      content.classList.remove("hidden");
+      icon.classList.remove("fa-chevron-down");
+      icon.classList.add("fa-chevron-up");
+    } else {
+      content.classList.add("hidden");
+      icon.classList.remove("fa-chevron-up");
+      icon.classList.add("fa-chevron-down");
+    }
+  }
+</script>
+
+{% endblock %}

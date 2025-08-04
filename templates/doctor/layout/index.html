@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapDx - {% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+    {% block style %}
+    {% endblock %}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-blue-600">SnapDx</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{{url_for('doctor_home')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                    <a href="{{url_for('doctor_diagnose')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Diagnose</a>
+                    <a href="{{url_for('doctor_history')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">History</a>
+                    <a href="{{url_for('doctor_chat')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Chat</a>
+                    <div class="relative">
+                        <button class="flex items-center text-gray-700 hover:text-blue-600">
+                            <i class="fas fa-user-circle text-xl mr-2"></i>
+                            Dr. Smith
+                            <i class="fas fa-chevron-down ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+{% block script %}{% endblock %}
+</body>
+</html>

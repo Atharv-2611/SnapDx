@@ -1,0 +1,170 @@
+{% extends 'doctor/layout/index.html'%}
+{% block title %} 
+Home
+{% endblock %}
+
+
+{% block content %}
+   <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Welcome Section -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Welcome back, Dr. Smith!</h1>
+                <p class="text-gray-600">Here's what's happening with your patients today.</p>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-users text-blue-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Patients</dt>
+                                    <dd class="text-lg font-medium text-gray-900">1,247</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Completed Today</dt>
+                                    <dd class="text-lg font-medium text-gray-900">12</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-chart-line text-purple-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Accuracy Rate</dt>
+                                    <dd class="text-lg font-medium text-gray-900">94.2%</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Patients & Quick Actions -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Recent Patients -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Patients</h3>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        <div class="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <i class="fas fa-user text-blue-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">Sarah Johnson</div>
+                                        <div class="text-sm text-gray-500">Headache, Fever</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500">2 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                                            <i class="fas fa-user text-green-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">Mike Chen</div>
+                                        <div class="text-sm text-gray-500">Chest Pain</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500">4 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                            <i class="fas fa-user text-purple-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">Emily Davis</div>
+                                        <div class="text-sm text-gray-500">Back Pain</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500">6 hours ago</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200">
+                        <a href="{{url_for('doctor_history')}}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            View all patients →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <a href="{{url_for('doctor_diagnose')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                                <i class="fas fa-stethoscope text-blue-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">New Diagnosis</span>
+                            </a>
+                            <a href="{{url_for('doctor_chat')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors">
+                                <i class="fas fa-comments text-green-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">Patient Chat</span>
+                            </a>
+                            <a href="{{url_for('doctor_history')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors">
+                                <i class="fas fa-history text-purple-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">View History</span>
+                            </a>
+                            <a href="{{url_for('doctor_working')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-yellow-50 hover:border-yellow-300 transition-colors">
+                                <i class="fas fa-question-circle text-yellow-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">How It Works</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+{% block script %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}
+{% endblock %}

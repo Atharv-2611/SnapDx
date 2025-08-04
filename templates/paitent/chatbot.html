@@ -1,0 +1,590 @@
+{% extends 'paitent/layout/index.html' %}
+{% block title %}Chatbot {% endblock %}
+
+{% block content %}
+<div class="flex h-full pt-16">
+      <!-- Chat Area -->
+      <div class="flex-1 flex flex-col">
+        <!-- Chat Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+          <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10">
+              <div
+                class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"
+              >
+                <i class="fas fa-robot text-blue-600"></i>
+              </div>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-medium text-gray-900">
+                SnapDx AI Assistant
+              </h3>
+              <p class="text-sm text-gray-500">Powered by Gemini AI</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-6" id="messages-container">
+          <!-- Welcome Message -->
+          <div class="flex justify-start mb-4">
+            <div
+              class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-blue-600 text-white"
+            >
+              <p class="text-sm">
+                Hello! I'm your SnapDx AI Assistant powered by Gemini AI. I can
+                help you with:
+              </p>
+              <ul class="text-sm mt-2 space-y-1">
+                <li>• Health consultation using your report ID</li>
+                <li>• Treatment recommendations</li>
+                <li>• Medication information</li>
+                <li>• Lifestyle advice</li>
+                <li>• Emergency guidance</li>
+              </ul>
+              <p class="text-sm mt-2">
+                Please enter your Report ID to start your consultation.
+              </p>
+            </div>
+          </div>
+
+          <!-- Report ID Input -->
+          <div class="flex justify-start mb-4">
+            <div
+              class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-200 text-gray-900"
+            >
+              <p class="text-sm">What's your Report ID?</p>
+              <div class="mt-2 flex space-x-2">
+                <input
+                  type="text"
+                  id="report-id-input"
+                  placeholder="Enter Report ID (e.g., SNAP1234567890)"
+                  class="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                />
+                <button
+                  id="submit-report-btn"
+                  class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="bg-white border-t border-gray-200 px-6 py-4">
+          <div class="flex items-center space-x-4">
+            <div class="flex-1">
+              <input
+                type="text"
+                id="message-input"
+                placeholder="Type your message..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                disabled
+              />
+            </div>
+            <button
+              id="send-button"
+              class="p-2 text-gray-400 hover:text-gray-600"
+              disabled
+            >
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consultation Panel -->
+      <div class="w-80 bg-white border-l border-gray-200 flex flex-col">
+        <div class="p-4 border-b border-gray-200">
+          <h2 class="text-lg font-medium text-gray-900">Your Consultation</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4">
+          <div id="consultation-content">
+            <div class="text-center text-gray-500 py-8">
+              <i class="fas fa-file-medical text-4xl mb-4"></i>
+              <p>Enter your Report ID to view your consultation details</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Gemini AI Configuration
+      const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; // Replace with your actual API key
+      const GEMINI_API_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
+      let currentReportData = null;
+      let conversationHistory = [];
+
+      // Sample report data (in real implementation, this would be fetched from database)
+      const sampleReports = {
+        SNAP1703123456789: {
+          patientName: "Sarah Johnson",
+          patientAge: 35,
+          patientGender: "Female",
+          primaryDiagnosis: "Pneumonia",
+          confidence: 87,
+          severity: "Moderate",
+          detectedConditions: [
+            "Lower respiratory infection",
+            "Pulmonary infiltrates",
+            "Pleural effusion",
+          ],
+          keyFindings: [
+            "Bilateral lung opacities",
+            "Increased bronchovascular markings",
+            "Small pleural effusion on right side",
+          ],
+          treatmentSuggestions: [
+            "Antibiotic therapy (Amoxicillin-Clavulanate)",
+            "Chest physiotherapy",
+            "Oxygen therapy if needed",
+            "Follow-up chest X-ray in 2 weeks",
+          ],
+          precautions: [
+            "Rest and avoid strenuous activities",
+            "Stay hydrated",
+            "Monitor temperature regularly",
+            "Avoid smoking and second-hand smoke",
+          ],
+          medications: [
+            {
+              name: "Amoxicillin-Clavulanate",
+              dosage: "500mg/125mg",
+              frequency: "Twice daily",
+              duration: "7 days",
+              instructions: "Take with food",
+            },
+            {
+              name: "Ibuprofen",
+              dosage: "400mg",
+              frequency: "Every 6 hours as needed",
+              duration: "For fever and pain",
+              instructions: "Take with food",
+            },
+          ],
+        },
+      };
+
+      // Call Gemini AI API
+      async function callGeminiAI(userMessage, reportData) {
+        try {
+          const prompt = `You are a medical AI assistant for SnapDx. A patient with the following diagnosis is asking for consultation:
+
+PATIENT INFORMATION:
+- Name: ${reportData.patientName}
+- Age: ${reportData.patientAge} years
+- Gender: ${reportData.patientGender}
+
+DIAGNOSIS:
+- Primary Diagnosis: ${reportData.primaryDiagnosis}
+- Confidence Level: ${reportData.confidence}%
+- Severity: ${reportData.severity}
+
+DETECTED CONDITIONS:
+${reportData.detectedConditions.map((condition) => `- ${condition}`).join("\n")}
+
+KEY FINDINGS:
+${reportData.keyFindings.map((finding) => `- ${finding}`).join("\n")}
+
+TREATMENT PLAN:
+${reportData.treatmentSuggestions
+  .map((treatment) => `- ${treatment}`)
+  .join("\n")}
+
+PRECAUTIONS:
+${reportData.precautions.map((precaution) => `- ${precaution}`).join("\n")}
+
+MEDICATIONS:
+${reportData.medications
+  .map(
+    (med) =>
+      `- ${med.name}: ${med.dosage} ${med.frequency} for ${med.duration}. Instructions: ${med.instructions}`
+  )
+  .join("\n")}
+
+PATIENT QUESTION: "${userMessage}"
+
+Please provide a helpful, informative, and empathetic response. Focus on:
+1. Addressing the patient's specific question
+2. Providing evidence-based medical advice
+3. Explaining treatment options and medications
+4. Offering lifestyle and precautionary advice
+5. Warning about emergency symptoms if relevant
+6. Encouraging follow-up with their doctor
+
+Keep your response conversational, clear, and supportive. Remember you are providing health information, not making a diagnosis.`;
+
+          const response = await fetch(
+            `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: prompt,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (
+            data.candidates &&
+            data.candidates[0] &&
+            data.candidates[0].content
+          ) {
+            return data.candidates[0].content.parts[0].text;
+          } else {
+            throw new Error("Invalid response format from Gemini API");
+          }
+        } catch (error) {
+          console.error("Error calling Gemini AI:", error);
+          // Fallback to local response if API fails
+          return generateFallbackResponse(userMessage, reportData);
+        }
+      }
+
+      // Fallback response generator (used if Gemini API fails)
+      function generateFallbackResponse(message, data) {
+        const lowerMessage = message.toLowerCase();
+
+        if (
+          lowerMessage.includes("treatment") ||
+          lowerMessage.includes("medicine") ||
+          lowerMessage.includes("medication")
+        ) {
+          return `Based on your diagnosis of ${
+            data.primaryDiagnosis
+          }, your treatment plan includes:
+
+${data.treatmentSuggestions.map((treatment) => `• ${treatment}`).join("\n")}
+
+Make sure to follow your doctor's instructions and complete the full course of antibiotics.`;
+        } else if (
+          lowerMessage.includes("precaution") ||
+          lowerMessage.includes("care") ||
+          lowerMessage.includes("avoid")
+        ) {
+          return `Here are important precautions for your condition:
+
+${data.precautions.map((precaution) => `• ${precaution}`).join("\n")}
+
+These precautions will help speed up your recovery and prevent complications.`;
+        } else if (
+          lowerMessage.includes("dosage") ||
+          lowerMessage.includes("how to take") ||
+          lowerMessage.includes("when to take")
+        ) {
+          return `Your medication instructions:
+
+${data.medications
+  .map(
+    (med) => `• ${med.name}: ${med.dosage} ${med.frequency} for ${med.duration}
+  Instructions: ${med.instructions}`
+  )
+  .join("\n\n")}
+
+Always take medications as prescribed and don't stop early without consulting your doctor.`;
+        } else if (
+          lowerMessage.includes("emergency") ||
+          lowerMessage.includes("urgent") ||
+          lowerMessage.includes("severe")
+        ) {
+          return `Seek immediate medical attention if you experience:
+
+• Difficulty breathing or shortness of breath
+• Chest pain
+• High fever (above 103°F/39.4°C)
+• Confusion or disorientation
+• Bluish lips or face
+• Severe coughing with blood
+
+These could indicate complications requiring emergency care.`;
+        } else {
+          return `I understand you're asking about "${message}". 
+
+For your ${data.primaryDiagnosis} diagnosis, I can help you with:
+• Treatment details and medication instructions
+• Precautions and care guidelines
+• Emergency symptoms to watch for
+• Recovery timeline and lifestyle advice
+• Follow-up care recommendations
+
+What specific information would you like to know?`;
+        }
+      }
+
+      // Handle report ID submission
+      document
+        .getElementById("submit-report-btn")
+        .addEventListener("click", function () {
+          const reportId = document
+            .getElementById("report-id-input")
+            .value.trim();
+          if (!reportId) {
+            alert("Please enter a Report ID");
+            return;
+          }
+
+          fetchReportData(reportId);
+        });
+
+      // Handle Enter key in report ID input
+      document
+        .getElementById("report-id-input")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            document.getElementById("submit-report-btn").click();
+          }
+        });
+
+      // Fetch report data
+      function fetchReportData(reportId) {
+        // Simulate API call
+        setTimeout(() => {
+          const reportData = sampleReports[reportId];
+
+          if (reportData) {
+            currentReportData = reportData;
+            displayReportData(reportData);
+            enableChat();
+
+            // Add success message
+            addMessage(
+              "bot",
+              `Report ID ${reportId} found! I can now provide you with personalized health advice based on your diagnosis using Gemini AI.`
+            );
+          } else {
+            addMessage(
+              "bot",
+              `Sorry, I couldn't find a report with ID ${reportId}. Please check the ID and try again.`
+            );
+          }
+        }, 1000);
+      }
+
+      // Display report data in consultation panel
+      function displayReportData(data) {
+        const consultationContent = document.getElementById(
+          "consultation-content"
+        );
+
+        consultationContent.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Patient Info -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-blue-900 mb-2">Patient Information</h3>
+                        <p class="text-sm text-blue-800"><strong>Name:</strong> ${
+                          data.patientName
+                        }</p>
+                        <p class="text-sm text-blue-800"><strong>Age:</strong> ${
+                          data.patientAge
+                        } years</p>
+                        <p class="text-sm text-blue-800"><strong>Gender:</strong> ${
+                          data.patientGender
+                        }</p>
+                    </div>
+
+                    <!-- Diagnosis -->
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-green-900 mb-2">Diagnosis</h3>
+                        <p class="text-sm text-green-800"><strong>Primary:</strong> ${
+                          data.primaryDiagnosis
+                        }</p>
+                        <p class="text-sm text-green-800"><strong>Confidence:</strong> ${
+                          data.confidence
+                        }%</p>
+                        <p class="text-sm text-green-800"><strong>Severity:</strong> ${
+                          data.severity
+                        }</p>
+                    </div>
+                    
+                    <!-- Treatment -->
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-purple-900 mb-2">Treatment Plan</h3>
+                        <ul class="text-sm text-purple-800 space-y-1">
+                            ${data.treatmentSuggestions
+                              .map(
+                                (treatment) =>
+                                  `<li class="flex items-start"><i class="fas fa-check-circle text-purple-600 mr-2 mt-0.5"></i>${treatment}</li>`
+                              )
+                              .join("")}
+                        </ul>
+                    </div>
+                    
+                    <!-- Precautions -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-yellow-900 mb-2">Precautions</h3>
+                        <ul class="text-sm text-yellow-800 space-y-1">
+                            ${data.precautions
+                              .map(
+                                (precaution) =>
+                                  `<li class="flex items-start"><i class="fas fa-exclamation-triangle text-yellow-600 mr-2 mt-0.5"></i>${precaution}</li>`
+                              )
+                              .join("")}
+                        </ul>
+                    </div>
+                    
+                    <!-- Medications -->
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-red-900 mb-2">Medications</h3>
+                        <div class="space-y-3">
+                            ${data.medications
+                              .map(
+                                (med) => `
+                                <div class="border-l-4 border-red-400 pl-3">
+                                    <p class="text-sm font-medium text-red-800">${med.name}</p>
+                                    <p class="text-xs text-red-700">${med.dosage} - ${med.frequency}</p>
+                                    <p class="text-xs text-red-700">Duration: ${med.duration}</p>
+                                    <p class="text-xs text-red-700">Instructions: ${med.instructions}</p>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    </div>
+
+                    <!-- AI Status -->
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-indigo-900 mb-2">AI Assistant</h3>
+                        <p class="text-sm text-indigo-800">Powered by Gemini AI</p>
+                        <p class="text-xs text-indigo-700">Providing personalized health advice</p>
+                    </div>
+                </div>
+            `;
+      }
+
+      // Enable chat functionality
+      function enableChat() {
+        document.getElementById("message-input").disabled = false;
+        document.getElementById("send-button").disabled = false;
+
+        // Add initial AI message
+        setTimeout(() => {
+          addMessage(
+            "bot",
+            `Hello ${currentReportData.patientName}! I'm your SnapDx AI Assistant powered by Gemini AI. I have your diagnosis information and can provide personalized health advice. 
+
+You can ask me about:
+• Your treatment plan and medications
+• Precautions and care guidelines
+• Emergency symptoms to watch for
+• Recovery timeline and lifestyle advice
+• Follow-up care recommendations
+• Any other health concerns related to your condition
+
+What would you like to know?`
+          );
+        }, 1000);
+      }
+
+      // Add message to chat
+      function addMessage(sender, text) {
+        const messagesContainer = document.getElementById("messages-container");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `flex ${
+          sender === "user" ? "justify-end" : "justify-start"
+        } mb-4`;
+
+        messageDiv.innerHTML = `
+                <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  sender === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-900"
+                }">
+                    <p class="text-sm whitespace-pre-line">${text}</p>
+                </div>
+            `;
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Store in conversation history
+        conversationHistory.push({ sender, text, timestamp: new Date() });
+      }
+
+      // Handle user message with Gemini AI
+      async function handleUserMessage(message) {
+        addMessage("user", message);
+
+        // Show typing indicator
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "flex justify-start mb-4";
+        typingDiv.innerHTML = `
+                <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-200 text-gray-900">
+                    <div class="flex items-center space-x-2">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <span class="text-sm">Gemini AI is thinking...</span>
+                    </div>
+                </div>
+            `;
+        document.getElementById("messages-container").appendChild(typingDiv);
+        document.getElementById("messages-container").scrollTop =
+          document.getElementById("messages-container").scrollHeight;
+
+        try {
+          // Call Gemini AI
+          const response = await callGeminiAI(message, currentReportData);
+
+          // Remove typing indicator
+          typingDiv.remove();
+
+          // Add AI response
+          addMessage("bot", response);
+        } catch (error) {
+          // Remove typing indicator
+          typingDiv.remove();
+
+          // Add error message
+          addMessage(
+            "bot",
+            `I apologize, but I'm having trouble connecting to my AI service right now. Please try again in a moment, or contact your doctor for immediate assistance.`
+          );
+
+          console.error("Error getting AI response:", error);
+        }
+      }
+
+      // Handle send button click
+      document
+        .getElementById("send-button")
+        .addEventListener("click", function () {
+          const input = document.getElementById("message-input");
+          const message = input.value.trim();
+
+          if (message && currentReportData) {
+            handleUserMessage(message);
+            input.value = "";
+          }
+        });
+
+      // Handle Enter key in message input
+      document
+        .getElementById("message-input")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            document.getElementById("send-button").click();
+          }
+        });
+    </script>
+
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends 'doctor/layout/index.html'%}
+{% block title %} 
+History
+{% endblock %}
+
+
+{% block content %}
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Patient History</h1>
+                    <p class="text-gray-600 mt-1">View and manage patient records and diagnoses</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+                    <div>
+                        <label for="search" class="block text-sm font-medium text-gray-700">Search Patients</label>
+                        <div class="mt-1 relative">
+                            <input type="text" id="search" name="search" 
+                                   class="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   placeholder="Search by name, ID, or symptoms...">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient Records Table -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Patient Records</h3>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Patient
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Diagnosis
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date
+                                </th>
+
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Confidence
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="patient-records">
+                            <!-- Sample data - will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
+                    </a>
+                    <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing <span class="font-medium">1</span> to <span class="font-medium">10</span> of <span class="font-medium">97</span> results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            <a href="#" class="bg-blue-50 border-blue-500 text-blue-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium">1</a>
+                            <a href="#" class="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">2</a>
+                            <a href="#" class="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">3</a>
+                            <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Detail Modal -->
+    <div id="patient-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900" id="modal-patient-name">Patient Details</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4" id="modal-content">
+                    <!-- Patient details will be populated here -->
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Close
+                    </button>
+                    <button onclick="editPatient()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                        Edit Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample patient data
+        const patients = [
+            {
+                id: 1,
+                name: "Sarah Johnson",
+                age: 28,
+                diagnosis: "Upper Respiratory Tract Infection",
+                date: "2024-01-15",
+                confidence: 87,
+                symptoms: "Fever, headache, cough",
+                treatment: "Rest, hydration, OTC pain relievers"
+            },
+            {
+                id: 2,
+                name: "Mike Chen",
+                age: 45,
+                diagnosis: "Hypertension",
+                date: "2024-01-14",
+                confidence: 92,
+                symptoms: "Headache, dizziness",
+                treatment: "Lifestyle modifications, medication review"
+            },
+            {
+                id: 3,
+                name: "Emily Davis",
+                age: 32,
+                diagnosis: "Lower Back Pain",
+                date: "2024-01-13",
+                confidence: 78,
+                symptoms: "Chronic back pain, limited mobility",
+                treatment: "Physical therapy, pain management"
+            },
+            {
+                id: 4,
+                name: "David Wilson",
+                age: 55,
+                diagnosis: "Type 2 Diabetes",
+                date: "2024-01-12",
+                confidence: 95,
+                symptoms: "Increased thirst, frequent urination",
+                treatment: "Blood sugar monitoring, diet modification"
+            }
+        ];
+
+        // Populate table
+        function populateTable() {
+            const tbody = document.getElementById('patient-records');
+            tbody.innerHTML = patients.map(patient => `
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="openModal(${patient.id})">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-user text-blue-600"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${patient.name}</div>
+                                <div class="text-sm text-gray-500">Age: ${patient.age}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${patient.diagnosis}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(patient.date).toLocaleDateString()}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${patient.confidence}%
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="event.stopPropagation(); viewDetails(${patient.id})" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); editPatient(${patient.id})" class="text-green-600 hover:text-green-900">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Search functionality
+        document.getElementById('search').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#patient-records tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Modal functions
+        function openModal(patientId) {
+            const patient = patients.find(p => p.id === patientId);
+            if (!patient) return;
+            
+            document.getElementById('modal-patient-name').textContent = patient.name;
+            document.getElementById('modal-content').innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="font-medium text-gray-900">Patient Information</h4>
+                        <p class="text-sm text-gray-600">Age: ${patient.age}</p>
+                        <p class="text-sm text-gray-600">Diagnosis Date: ${new Date(patient.date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">Diagnosis</h4>
+                        <p class="text-sm text-gray-600">${patient.diagnosis}</p>
+                        <p class="text-sm text-gray-600">Confidence: ${patient.confidence}%</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-900">Symptoms</h4>
+                    <p class="text-sm text-gray-600">${patient.symptoms}</p>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-900">Treatment</h4>
+                    <p class="text-sm text-gray-600">${patient.treatment}</p>
+                </div>
+            `;
+            
+            document.getElementById('patient-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('patient-modal').classList.add('hidden');
+        }
+
+        function viewDetails(patientId) {
+            openModal(patientId);
+        }
+
+        function editPatient(patientId) {
+            alert(`Edit patient ${patientId} - This would open an edit form`);
+        }
+
+
+
+        // Initialize table
+        populateTable();
+    </script>
+
+{% endblock %}
