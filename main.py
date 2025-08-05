@@ -1,13 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from pymongo import MongoClient
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = 'supersecretkey'
 
-# Simulated user database
-users = {
-    'doctor@example.com': {'password': 'doc123', 'role': 'doctor'},
-    'patient@example.com': {'password': 'pat123', 'role': 'patient'}
-}
+# MongoDB setup
+client = MongoClient("mongodb+srv://atharv:$4Jeu67EW8DkJsA@snapdx.1ohabx8.mongodb.net/?retryWrites=true&w=majority&appName=snapdx")
+db = client["snapdx"]
+users_collection = db["users"]
 
 @app.route('/')
 def index():
@@ -20,20 +21,42 @@ def login():
         password = request.form['password']
         role = request.form['role']
 
-        user = users.get(email)
+        user = users_collection.find_one({"email": email, "role": role})
 
-        if user and user['password'] == password and user['role'] == role:
+        if user and check_password_hash(user['password'], password):
             session['email'] = email
             session['role'] = role
             if role == 'doctor':
                 return redirect(url_for('doctor_home'))
             else:
-                return redirect(url_for('patient_chatbot'))
+                return redirect(url_for('paitent_chatbot'))
         else:
             flash('Invalid credentials or role mismatch')
             return redirect(url_for('login'))
 
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        role = request.form['role']
+
+        if users_collection.find_one({"email": email, "role": role}):
+            flash('User already exists with this email and role.')
+            return redirect(url_for('register'))
+
+        hashed_password = generate_password_hash(password)
+        users_collection.insert_one({
+            "email": email,
+            "password": hashed_password,
+            "role": role
+        })
+        flash('Registration successful! Please log in.')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
 
 @app.route('/logout')
 def logout():
