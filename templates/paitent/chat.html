@@ -83,454 +83,155 @@
   </div>
 </div>
 
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2q0cB8wGvUihk8nU+3GqnYv4vGmW1b2Ywq5zj6k8C3Q5Gq9vZ2W1dZx5mQnq0V7T" crossorigin="anonymous"></script>
 <script>
-  // Firebase configuration
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID",
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const auth = firebase.auth();
-  const realtimeDb = firebase.database();
-
-  // Current user data
-  let currentUser = null;
-  let currentDoctorId = null;
+  const patientEmail = "{{ user_email }}";
+  let currentDoctorEmail = null;
   let doctors = [];
-  let unsubscribeMessages = null;
+  let currentRoomId = null;
+  const socket = io();
 
-  // Initialize the chat
-  async function initializeChat() {
-    try {
-      // For demo purposes, we'll use a mock patient user
-      // In production, you'd implement proper authentication
-      currentUser = {
-        id: "patient_001",
-        name: "Sarah Johnson",
-        type: "patient",
-        email: "sarah@example.com",
-      };
-
-      document.getElementById("patient-name").textContent = currentUser.name;
-
-      // Load doctors
-      await loadDoctors();
-
-      // Set up real-time presence
-      setupPresence();
-    } catch (error) {
-      console.error("Error initializing chat:", error);
-    }
-  }
-
-  // Load doctors from Firestore
-  async function loadDoctors() {
-    try {
-      const doctorsRef = db.collection("users").where("type", "==", "doctor");
-      const snapshot = await doctorsRef.get();
-
-      doctors = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        lastMessage: "",
-        time: "",
-        unread: 0,
-      }));
-
-      // Load last messages for each doctor
-      for (let doctor of doctors) {
-        await loadLastMessage(doctor.id);
-      }
-
-      populateDoctorList();
-    } catch (error) {
-      console.error("Error loading doctors:", error);
-    }
-  }
-
-  // Load last message for a doctor
-  async function loadLastMessage(doctorId) {
-    try {
-      const chatId = getChatId(currentUser.id, doctorId);
-      const messagesRef = db
-        .collection("chats")
-        .doc(chatId)
-        .collection("messages")
-        .orderBy("timestamp", "desc")
-        .limit(1);
-
-      const snapshot = await messagesRef.get();
-      if (!snapshot.empty) {
-        const lastMessage = snapshot.docs[0].data();
-        const doctor = doctors.find((d) => d.id === doctorId);
-        if (doctor) {
-          doctor.lastMessage = lastMessage.text;
-          doctor.time = formatTime(lastMessage.timestamp);
-          doctor.unread = await getUnreadCount(doctorId);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading last message:", error);
-    }
-  }
-
-  // Get unread message count
-  async function getUnreadCount(doctorId) {
-    try {
-      const chatId = getChatId(currentUser.id, doctorId);
-      const messagesRef = db
-        .collection("chats")
-        .doc(chatId)
-        .collection("messages")
-        .where("read", "==", false)
-        .where("senderId", "==", doctorId);
-
-      const snapshot = await messagesRef.get();
-      return snapshot.size;
-    } catch (error) {
-      console.error("Error getting unread count:", error);
-      return 0;
-    }
-  }
-
-  // Get chat ID (consistent between doctor and patient)
-  function getChatId(user1Id, user2Id) {
-    const sortedIds = [user1Id, user2Id].sort();
-    return `${sortedIds[0]}_${sortedIds[1]}`;
-  }
-
-  // Setup real-time presence
-  function setupPresence() {
-    const presenceRef = realtimeDb.ref("presence");
-
-    // Update presence when user comes online
-    const userPresenceRef = presenceRef.child(currentUser.id);
-    userPresenceRef.set({
-      online: true,
-      lastSeen: firebase.database.ServerValue.TIMESTAMP,
-      type: currentUser.type,
-    });
-
-    // Update presence when user goes offline
-    window.addEventListener("beforeunload", () => {
-      userPresenceRef.set({
-        online: false,
-        lastSeen: firebase.database.ServerValue.TIMESTAMP,
-        type: currentUser.type,
-      });
-    });
-  }
-
-  // Populate doctor list
   function populateDoctorList() {
     const doctorList = document.getElementById("doctor-list");
-    doctorList.innerHTML = doctors
-      .map(
-        (doctor) => `
-                <div class="p-4 hover:bg-gray-50 cursor-pointer border-l-4 border-transparent ${
-                  doctor.id === currentDoctorId
-                    ? "border-blue-500 bg-blue-50"
-                    : ""
-                }" 
-                     onclick="selectDoctor('${doctor.id}')">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 h-10 w-10">
-                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <span class="text-sm font-medium text-blue-600">${
-                                      doctor.name ? doctor.name.charAt(0) : "D"
-                                    }</span>
-                                </div>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-gray-900">${
-                                  doctor.name || "Unknown Doctor"
-                                }</p>
-                                <p class="text-sm text-gray-500">${
-                                  doctor.lastMessage || "No messages yet"
-                                }</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-end">
-                            <p class="text-xs text-gray-500">${
-                              doctor.time || ""
-                            }</p>
-                            ${
-                              doctor.unread > 0
-                                ? `<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">${doctor.unread}</span>`
-                                : ""
-                            }
-                        </div>
-                    </div>
-                    <div class="flex items-center mt-2">
-                        <div class="w-2 h-2 rounded-full ${
-                          doctor.online ? "bg-green-400" : "bg-gray-400"
-                        }"></div>
-                        <span class="text-xs text-gray-500 ml-2">${
-                          doctor.online ? "Online" : "Offline"
-                        }</span>
-                    </div>
-                </div>
-            `
-      )
-      .join("");
+    doctorList.innerHTML = doctors.map(doctor => `
+      <div class="p-4 hover:bg-gray-50 cursor-pointer border-l-4 border-transparent ${doctor.doctor_email === currentDoctorEmail ? 'border-blue-500 bg-blue-50' : ''}"
+           onclick="selectDoctor('${doctor.doctor_email}')">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10">
+              <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <span class="text-sm font-medium text-blue-600">${(doctor.doctor_name||'D').charAt(0)}</span>
+              </div>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-900">${doctor.doctor_name||'Unknown Doctor'}</p>
+              <p class="text-sm text-gray-500">Last: ${doctor.last_diagnosis||''}</p>
+            </div>
+          </div>
+          <div class="flex flex-col items-end text-xs text-gray-500">${new Date(doctor.last_diagnosis_date).toLocaleDateString()}</div>
+        </div>
+      </div>
+    `).join('');
   }
 
-  // Select doctor and load chat
-  async function selectDoctor(doctorId) {
-    currentDoctorId = doctorId;
-    const doctor = doctors.find((d) => d.id === doctorId);
-
-    // Update doctor list styling
+  async function selectDoctor(doctorEmail) {
+    currentDoctorEmail = doctorEmail;
+    const doctor = doctors.find(d => d.doctor_email === doctorEmail);
     populateDoctorList();
-
-    // Update chat header
-    document.getElementById("chat-doctor-name").textContent =
-      doctor.name || "Unknown Doctor";
-    document.getElementById("chat-doctor-status").textContent = doctor.online
-      ? "Online"
-      : "Offline";
-
-    // Enable message input
+    document.getElementById("chat-doctor-name").textContent = doctor.doctor_name || 'Unknown Doctor';
+    document.getElementById("chat-doctor-status").textContent = '';
     document.getElementById("message-input").disabled = false;
     document.getElementById("send-button").disabled = false;
-
-    // Load messages
-    await loadMessages(doctorId);
-
-    // Mark messages as read
-    await markMessagesAsRead(doctorId);
+    const roomId = `${doctorEmail.toLowerCase()}__${patientEmail.toLowerCase()}`;
+    joinRoom(roomId);
+    loadHistory(roomId);
   }
 
-  // Load chat messages
-  async function loadMessages(doctorId) {
+  function joinRoom(roomId) {
+    if (currentRoomId && currentRoomId !== roomId) {
+      socket.emit('leave', { room_id: currentRoomId });
+    }
+    currentRoomId = roomId;
+    socket.emit('join', { room_id });
+  }
+
+  async function loadHistory(roomId) {
+    const messagesContainer = document.getElementById("messages-container");
+    messagesContainer.innerHTML = '<div class="text-center text-gray-500">Loading messages...</div>';
     try {
-      // Unsubscribe from previous listener
-      if (unsubscribeMessages) {
-        unsubscribeMessages();
+      const res = await fetch(`/api/messages?room_id=${encodeURIComponent(roomId)}`);
+      const data = await res.json();
+      if (data.success) {
+        renderMessages(data.messages || []);
+      } else {
+        messagesContainer.innerHTML = '<div class="text-center text-red-500">Failed to load messages</div>';
       }
-
-      const chatId = getChatId(currentUser.id, doctorId);
-      const messagesRef = db
-        .collection("chats")
-        .doc(chatId)
-        .collection("messages")
-        .orderBy("timestamp", "asc");
-
-      // Set up real-time listener
-      unsubscribeMessages = messagesRef.onSnapshot((snapshot) => {
-        const messages = [];
-        snapshot.forEach((doc) => {
-          messages.push({
-            id: doc.id,
-            ...doc.data(),
-          });
-        });
-
-        displayMessages(messages);
-      });
-    } catch (error) {
-      console.error("Error loading messages:", error);
+    } catch (e) {
+      messagesContainer.innerHTML = '<div class="text-center text-red-500">Failed to load messages</div>';
     }
   }
 
-  // Display messages
-  function displayMessages(messages) {
+  function renderMessages(messages) {
     const messagesContainer = document.getElementById("messages-container");
-
-    if (messages.length === 0) {
+    if (!messages.length) {
       messagesContainer.innerHTML = `
-                    <div class="text-center text-gray-500 mt-8">
-                        <i class="fas fa-comments text-4xl mb-4"></i>
-                        <p>No messages yet. Start the conversation!</p>
-                    </div>
-                `;
+        <div class="text-center text-gray-500 mt-8">
+          <i class="fas fa-comments text-4xl mb-4"></i>
+          <p>No messages yet. Start the conversation!</p>
+        </div>`;
       return;
     }
-
-    messagesContainer.innerHTML = messages
-      .map(
-        (message) => `
-                <div class="flex ${
-                  message.senderId === currentUser.id
-                    ? "justify-end"
-                    : "justify-start"
-                } mb-4">
-                    <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.senderId === currentUser.id
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-900"
-                    }">
-                        <p class="text-sm">${message.text}</p>
-                        <p class="text-xs ${
-                          message.senderId === currentUser.id
-                            ? "text-blue-100"
-                            : "text-gray-500"
-                        } mt-1">${formatTime(message.timestamp)}</p>
-                    </div>
-                </div>
-            `
-      )
-      .join("");
-
-    // Scroll to bottom
+    messagesContainer.innerHTML = messages.map(m => messageBubble(m)).join('');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
-  // Send message
-  async function sendMessage() {
+  function messageBubble(m) {
+    const isMe = m.sender_email && m.sender_email.toLowerCase() === patientEmail.toLowerCase();
+    const ts = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+      <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
+        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'}">
+          <p class="text-sm">${escapeHtml(m.text || '')}</p>
+          <p class="text-xs ${isMe ? 'text-blue-100' : 'text-gray-500'} mt-1">${ts}</p>
+        </div>
+      </div>`;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>\"]+/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
+  }
+
+  function sendMessage() {
     const input = document.getElementById("message-input");
-    const message = input.value.trim();
-
-    if (!message || !currentDoctorId) return;
-
-    try {
-      const chatId = getChatId(currentUser.id, currentDoctorId);
-      const messageData = {
-        text: message,
-        senderId: currentUser.id,
-        senderName: currentUser.name,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        read: false,
-      };
-
-      await db
-        .collection("chats")
-        .doc(chatId)
-        .collection("messages")
-        .add(messageData);
-
-      // Clear input
-      input.value = "";
-    } catch (error) {
-      console.error("Error sending message:", error);
-      alert("Failed to send message. Please try again.");
-    }
+    const text = input.value.trim();
+    if (!text || !currentRoomId) return;
+    socket.emit('chat_message', {
+      room_id: currentRoomId,
+      text,
+      sender_email: patientEmail,
+      sender_role: 'patient'
+    });
+    input.value = '';
   }
 
-  // Mark messages as read
-  async function markMessagesAsRead(doctorId) {
+  socket.on('chat_message', (m) => {
+    if (m.room_id !== currentRoomId) return;
+    const container = document.getElementById('messages-container');
+    container.insertAdjacentHTML('beforeend', messageBubble(m));
+    container.scrollTop = container.scrollHeight;
+  });
+
+  async function loadDoctors() {
     try {
-      const chatId = getChatId(currentUser.id, doctorId);
-      const messagesRef = db
-        .collection("chats")
-        .doc(chatId)
-        .collection("messages")
-        .where("read", "==", false)
-        .where("senderId", "==", doctorId);
-
-      const snapshot = await messagesRef.get();
-      const batch = db.batch();
-
-      snapshot.docs.forEach((doc) => {
-        batch.update(doc.ref, { read: true });
-      });
-
-      await batch.commit();
-
-      // Update unread count in doctor list
-      const doctor = doctors.find((d) => d.id === doctorId);
-      if (doctor) {
-        doctor.unread = 0;
+      const res = await fetch('/api/chat-doctors');
+      const data = await res.json();
+      if (data.success) {
+        doctors = data.doctors || [];
         populateDoctorList();
+      } else {
+        console.error('Failed to load doctors', data.error);
       }
-    } catch (error) {
-      console.error("Error marking messages as read:", error);
+    } catch (e) {
+      console.error('Failed to load doctors', e);
     }
-  }
-
-  // Format timestamp
-  function formatTime(timestamp) {
-    if (!timestamp) return "";
-
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-
-  // Search doctors
-  function searchDoctors() {
-    const searchTerm = document
-      .getElementById("doctor-search")
-      .value.toLowerCase();
-    const filteredDoctors = doctors.filter((doctor) =>
-      doctor.name.toLowerCase().includes(searchTerm)
-    );
-
-    const doctorList = document.getElementById("doctor-list");
-    doctorList.innerHTML = filteredDoctors
-      .map(
-        (doctor) => `
-                <div class="p-4 hover:bg-gray-50 cursor-pointer border-l-4 border-transparent ${
-                  doctor.id === currentDoctorId
-                    ? "border-blue-500 bg-blue-50"
-                    : ""
-                }" 
-                     onclick="selectDoctor('${doctor.id}')">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 h-10 w-10">
-                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <span class="text-sm font-medium text-blue-600">${
-                                      doctor.name ? doctor.name.charAt(0) : "D"
-                                    }</span>
-                                </div>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-medium text-gray-900">${
-                                  doctor.name || "Unknown Doctor"
-                                }</p>
-                                <p class="text-sm text-gray-500">${
-                                  doctor.lastMessage || "No messages yet"
-                                }</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-end">
-                            <p class="text-xs text-gray-500">${
-                              doctor.time || ""
-                            }</p>
-                            ${
-                              doctor.unread > 0
-                                ? `<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">${doctor.unread}</span>`
-                                : ""
-                            }
-                        </div>
-                    </div>
-                    <div class="flex items-center mt-2">
-                        <div class="w-2 h-2 rounded-full ${
-                          doctor.online ? "bg-green-400" : "bg-gray-400"
-                        }"></div>
-                        <span class="text-xs text-gray-500 ml-2">${
-                          doctor.online ? "Online" : "Offline"
-                        }</span>
-                    </div>
-                </div>
-            `
-      )
-      .join("");
   }
 
   // Event listeners
   document.getElementById("send-button").addEventListener("click", sendMessage);
-  document
-    .getElementById("message-input")
-    .addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        sendMessage();
-      }
-    });
-  document
-    .getElementById("doctor-search")
-    .addEventListener("input", searchDoctors);
+  document.getElementById("message-input").addEventListener("keypress", function (e) {
+    if (e.key === "Enter") sendMessage();
+  });
+  document.getElementById("doctor-search").addEventListener("input", function() {
+    const searchTerm = this.value.toLowerCase();
+    const filtered = doctors.filter(d => (d.doctor_name||'').toLowerCase().includes(searchTerm) || (d.doctor_email||'').toLowerCase().includes(searchTerm));
+    const backup = doctors;
+    doctors = filtered;
+    populateDoctorList();
+    doctors = backup;
+  });
 
   // Initialize
-  initializeChat();
+  document.addEventListener('DOMContentLoaded', loadDoctors);
 </script>
 
 {% endblock %}

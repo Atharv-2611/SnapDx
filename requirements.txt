@@ -1,7 +1,9 @@
 Flask==2.3.3
 pymongo==4.5.0
 Werkzeug==2.3.7
-tensorflow==2.13.0
 Pillow==10.0.0
 numpy==1.24.3
 python-dotenv==1.0.0
+Flask-SocketIO==5.3.6
+python-socketio==5.11.2
+python-engineio==4.9.0

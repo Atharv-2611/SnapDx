@@ -143,6 +143,11 @@ Diagnosis
                             <input type="tel" id="patient-phone" name="patient-phone" required
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                         </div>
+                         <div>
+                             <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                             <input type="email" id="patient-email" name="patient-email"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                         </div>
                     </div>
 
                     <!-- Disease-Specific Information -->
@@ -210,11 +215,12 @@ Diagnosis
                         <div>
                             <h3 class="font-medium text-gray-900 mb-2">Patient Information</h3>
                             <div class="bg-gray-50 rounded-lg p-4">
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     <div><strong>Name:</strong> <span id="report-patient-name">-</span></div>
                                     <div><strong>Age:</strong> <span id="report-patient-age">-</span></div>
                                     <div><strong>Gender:</strong> <span id="report-patient-gender">-</span></div>
                                     <div><strong>Contact:</strong> <span id="report-patient-phone">-</span></div>
+                                        <div><strong>Email:</strong> <span id="report-patient-email">-</span></div>
                                 </div>
                             </div>
                         </div>
@@ -485,6 +491,7 @@ Diagnosis
                 patient_age: document.getElementById('patient-age').value,
                 patient_gender: document.getElementById('patient-gender').value,
                 patient_phone: document.getElementById('patient-phone').value,
+                patient_email: document.getElementById('patient-email').value,
                 disease_type: selectedDisease,
                 images: uploadedImages
             };
@@ -530,6 +537,9 @@ Diagnosis
             document.getElementById('report-patient-phone').textContent = data.patient_info.phone;
             document.getElementById('report-disease-type').textContent = diseaseData[selectedDisease].name;
             document.getElementById('report-confidence').textContent = data.prediction.confidence_percentage + '%';
+            if (data.patient_info.email) {
+                document.getElementById('report-patient-email').textContent = data.patient_info.email;
+            }
             
             // Update disease summary based on prediction
             let summary = diseaseData[selectedDisease].diseaseSummary;
