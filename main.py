@@ -6,6 +6,7 @@ from disease_prediction import predictor
 from datetime import datetime
 import json
 import numpy as np
+import os
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = 'supersecretkey'
@@ -663,4 +664,6 @@ def handle_stop_typing(data):
         emit('stop_typing', data, room=room_id)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8888)
+    # Get port from environment variable (for Render deployment) or use default
+    port = int(os.environ.get("PORT", 8888))
+    socketio.run(app, host="0.0.0.0", port=port)
