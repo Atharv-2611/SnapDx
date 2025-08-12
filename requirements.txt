@@ -7,3 +7,5 @@ python-dotenv==1.0.0
 Flask-SocketIO==5.3.6
 python-socketio==5.11.2
 python-engineio==4.9.0
+langchain==0.2.14
+langchain-google-genai==2.0.0

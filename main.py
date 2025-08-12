@@ -6,6 +6,17 @@ from disease_prediction import predictor
 from datetime import datetime
 import json
 import numpy as np
+import os
+
+# LangChain + Gemini (Google Generative AI)
+try:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+except Exception as _:
+    ChatGoogleGenerativeAI = None
+    SystemMessage = None
+    HumanMessage = None
+    AIMessage = None
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = 'supersecretkey'
@@ -18,6 +29,7 @@ users_collection = db["users"]
 patients_collection = db["patients"]
 diagnoses_collection = db["diagnoses"]
 messages_collection = db["messages"]
+ai_messages_collection = db["ai_messages"]
 
 
 def build_room_id(doctor_email: str, patient_key: str) -> str:
@@ -25,6 +37,21 @@ def build_room_id(doctor_email: str, patient_key: str) -> str:
     patient_key should be email if available, else phone, else patient_id string.
     """
     return f"{doctor_email.strip().lower()}__{patient_key.strip().lower()}"
+
+
+def get_llm():
+    """Return a configured LangChain Chat model for Gemini. Lazy init to avoid import errors when not installed."""
+    if ChatGoogleGenerativeAI is None:
+        raise RuntimeError("LangChain Google Generative AI is not installed. Please install 'langchain-google-genai'.")
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    if not google_api_key:
+        raise RuntimeError("Missing GOOGLE_API_KEY environment variable for Gemini.")
+    # Instantiate model (lightweight client; safe to create per call)
+    return ChatGoogleGenerativeAI(
+        model="gemini-1.5-pro",
+        temperature=0.3,
+        max_output_tokens=800,
+    )
 
 @app.route('/')
 def index():
@@ -247,6 +274,203 @@ def diagnose_disease():
         
     except Exception as e:
         print(f"Diagnosis error: {e}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@app.route("/api/ai/start", methods=["POST"])
+def ai_start():
+    """Start an AI consultation. Optionally provide report_id. Returns conversation_id and optional report_data.
+
+    Body (optional): { "report_id": "SNAP..." }
+    """
+    if 'email' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    try:
+        data = request.get_json(force=True)
+        report_id = (data or {}).get('report_id', '').strip() if data is not None else ''
+        requester_email = session.get('email')
+
+        if not report_id:
+            # General AI chat without report context
+            conversation_id = f"ai__{(requester_email or 'guest').strip().lower()}__general"
+            return jsonify({'success': True, 'conversation_id': conversation_id})
+
+        # Report-based context
+        diagnosis = diagnoses_collection.find_one({'report_id': report_id})
+        if not diagnosis:
+            return jsonify({'success': False, 'error': 'Report not found'}), 404
+
+        # Optional: ensure the requesting patient matches the diagnosis patient (if email exists)
+        diagnosis_patient_email = diagnosis.get('patient_email')
+        if diagnosis_patient_email and requester_email and diagnosis_patient_email.lower() != requester_email.lower():
+            return jsonify({'success': False, 'error': 'Report does not belong to this account'}), 403
+
+        # Fetch patient details if available
+        patient_doc = None
+        try:
+            if diagnosis.get('patient_id'):
+                patient_doc = patients_collection.find_one({'_id': diagnosis['patient_id']})
+        except Exception:
+            patient_doc = None
+
+        # Build report data for UI
+        patient_name = diagnosis.get('patient_name') or (patient_doc or {}).get('name') or 'Patient'
+        patient_age = (patient_doc or {}).get('age', '')
+        patient_gender = (patient_doc or {}).get('gender', '')
+        primary_diagnosis = diagnosis.get('disease_name') or diagnosis.get('disease_type', '')
+        confidence = diagnosis.get('confidence_percentage') or diagnosis.get('probability') or 0
+        try:
+            confidence_int = int(round(float(confidence)))
+        except Exception:
+            confidence_int = 0
+        severity = (
+            'Mild' if confidence_int < 60 else 'Moderate' if confidence_int < 85 else 'Severe'
+        )
+
+        report_data = {
+            'patientName': patient_name,
+            'patientAge': patient_age,
+            'patientGender': patient_gender,
+            'primaryDiagnosis': primary_diagnosis,
+            'confidence': confidence_int,
+            'severity': severity,
+            'detectedConditions': [],
+            'keyFindings': [],
+            'treatmentSuggestions': [],
+            'precautions': [],
+            'medications': [],
+        }
+
+        conversation_id = f"ai__{(requester_email or 'guest').strip().lower()}__{report_id.strip().lower()}"
+
+        return jsonify({'success': True, 'conversation_id': conversation_id, 'report_data': report_data})
+    except Exception as e:
+        print(f"AI start error: {e}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@app.route("/api/ai/messages", methods=["GET"]) 
+def ai_get_messages():
+    """Fetch AI chat history for a conversation_id."""
+    if 'email' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    conversation_id = request.args.get('conversation_id', '').strip()
+    if not conversation_id:
+        return jsonify({'success': False, 'error': 'Missing conversation_id'}), 400
+    try:
+        docs = list(ai_messages_collection.find({'conversation_id': conversation_id}).sort('timestamp', 1).limit(200))
+        for d in docs:
+            d['_id'] = str(d['_id'])
+            d['timestamp'] = d['timestamp'].isoformat()
+        return jsonify({'success': True, 'messages': docs})
+    except Exception as e:
+        print(f"Error fetching AI messages: {e}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@app.route("/api/ai/message", methods=["POST"])
+def ai_message():
+    """Send a user message and get AI response via LangChain + Gemini. Persists both sides to MongoDB.
+
+    Expected body: { "conversation_id": str, "message": str }
+    """
+    if 'email' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    try:
+        payload = request.get_json(force=True)
+        conversation_id = (payload or {}).get('conversation_id', '').strip()
+        user_message_text = (payload or {}).get('message', '').strip()
+        if not conversation_id or not user_message_text:
+            return jsonify({'success': False, 'error': 'Missing conversation_id or message'}), 400
+
+        # Persist user message
+        user_msg_doc = {
+            'conversation_id': conversation_id,
+            'sender': 'user',
+            'sender_email': session.get('email'),
+            'text': user_message_text,
+            'timestamp': datetime.now(),
+        }
+        ai_messages_collection.insert_one(user_msg_doc)
+
+        # Extract report_id from conversation_id convention
+        try:
+            _, email_part, report_id_part = conversation_id.split('__', 2)
+            report_id = report_id_part.upper()
+        except Exception:
+            report_id = ''
+
+        # Fetch diagnosis context for system prompt
+        diagnosis = diagnoses_collection.find_one({'report_id': report_id}) if report_id else None
+        patient_doc = None
+        try:
+            if diagnosis and diagnosis.get('patient_id'):
+                patient_doc = patients_collection.find_one({'_id': diagnosis['patient_id']})
+        except Exception:
+            patient_doc = None
+
+        # Compose system prompt with available context
+        system_context_lines = [
+            "You are SnapDx AI Assistant. Provide empathetic, evidence-based health information.",
+            "Do not provide a diagnosis. Encourage follow-up with their doctor.",
+        ]
+        if diagnosis:
+            system_context_lines.append("-- PATIENT & REPORT CONTEXT --")
+            if patient_doc:
+                system_context_lines.append(f"Name: {patient_doc.get('name', diagnosis.get('patient_name', 'Patient'))}")
+                if patient_doc.get('age'):
+                    system_context_lines.append(f"Age: {patient_doc.get('age')}")
+                if patient_doc.get('gender'):
+                    system_context_lines.append(f"Gender: {patient_doc.get('gender')}")
+            else:
+                system_context_lines.append(f"Name: {diagnosis.get('patient_name', 'Patient')}")
+            primary_dx = diagnosis.get('disease_name') or diagnosis.get('disease_type') or ''
+            if primary_dx:
+                system_context_lines.append(f"Primary diagnosis: {primary_dx}")
+            if diagnosis.get('confidence_percentage') is not None:
+                system_context_lines.append(f"Confidence: {diagnosis.get('confidence_percentage')}%")
+
+        system_prompt = "\n".join(system_context_lines)
+
+        # Build message sequence from recent history
+        history_msgs = list(ai_messages_collection.find({'conversation_id': conversation_id}).sort('timestamp', 1).limit(10))
+        chat_messages = [SystemMessage(content=system_prompt)]
+        for m in history_msgs:
+            if m.get('sender') == 'user':
+                chat_messages.append(HumanMessage(content=m.get('text', '')))
+            elif m.get('sender') == 'ai':
+                chat_messages.append(AIMessage(content=m.get('text', '')))
+        # Add the current user message last (already in history, but include explicitly to the model)
+        if not history_msgs or history_msgs[-1].get('text') != user_message_text:
+            chat_messages.append(HumanMessage(content=user_message_text))
+
+        # Call Gemini via LangChain
+        try:
+            llm = get_llm()
+            ai_response_message = llm.invoke(chat_messages)
+            ai_text = getattr(ai_response_message, 'content', '') or ''
+            if not ai_text:
+                ai_text = "I'm here to help. Could you please clarify your question?"
+        except Exception as e:
+            print(f"Gemini call failed: {e}")
+            ai_text = (
+                "I'm having trouble reaching my AI service right now. Please try again later, "
+                "and contact your doctor for urgent concerns."
+            )
+
+        # Persist AI message
+        ai_msg_doc = {
+            'conversation_id': conversation_id,
+            'sender': 'ai',
+            'text': ai_text,
+            'timestamp': datetime.now(),
+        }
+        ai_messages_collection.insert_one(ai_msg_doc)
+
+        return jsonify({'success': True, 'response': ai_text})
+    except Exception as e:
+        print(f"AI message error: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 @app.route("/api/diagnoses", methods=['GET'])
