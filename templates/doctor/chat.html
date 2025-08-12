@@ -26,6 +26,20 @@
                     <input type="text" id="patient-search" placeholder="Search by name or phone..." 
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm">
                 </div>
+                <div class="mt-2 flex space-x-2">
+                    <button
+                        onclick="debugSession()"
+                        class="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                    >
+                        Debug Session
+                    </button>
+                    <button
+                        onclick="debugDiagnoses()"
+                        class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        Debug Diagnoses
+                    </button>
+                </div>
             </div>
             
             <div class="flex-1 overflow-y-auto">
@@ -109,7 +123,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2q0cB8wGvUihk8nU+3GqnYv4vGmW1b2Ywq5zj6k8C3Q5Gq9vZ2W1dZx5mQnq0V7T" crossorigin="anonymous"></script>
+            <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         let patients = [];
         let currentPatient = null;
@@ -124,11 +138,12 @@
                 console.log('Fetching patients for logged-in doctor...');
                 const response = await fetch('/api/chat-patients');
                 const data = await response.json();
+                console.log('Response from /api/chat-patients:', data);
                 
                 if (data.success) {
                     patients = data.patients;
                     filteredPatients = [...patients];
-                    console.log(`Loaded ${patients.length} patients diagnosed by the doctor`);
+                    console.log(`Loaded ${patients.length} patients diagnosed by the doctor:`, patients);
                     populatePatientList();
                 } else {
                     console.error('Error fetching patients:', data.error);
@@ -494,6 +509,31 @@
         document.getElementById('message-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') sendMessage();
         });
+
+        // Debug functions
+        async function debugSession() {
+            try {
+                const res = await fetch('/api/debug/session');
+                const data = await res.json();
+                console.log('Session Debug:', data);
+                alert(`Session Debug:\nEmail: ${data.user_email}\nRole: ${data.user_role}\nName: ${data.user_name}`);
+            } catch (e) {
+                console.error('Debug session error:', e);
+                alert('Debug session error: ' + e.message);
+            }
+        }
+
+        async function debugDiagnoses() {
+            try {
+                const res = await fetch('/api/debug/diagnoses');
+                const data = await res.json();
+                console.log('Diagnoses Debug:', data);
+                alert(`Diagnoses Debug:\nFound: ${data.diagnoses_count} diagnoses\nCheck console for details`);
+            } catch (e) {
+                console.error('Debug diagnoses error:', e);
+                alert('Debug diagnoses error: ' + e.message);
+            }
+        }
 
         // Load patients when page loads
         document.addEventListener('DOMContentLoaded', function() {

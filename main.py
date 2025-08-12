@@ -373,38 +373,41 @@ def get_chat_patients():
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
     try:
+        doctor_email = session['email']
+        print(f"Looking for patients for doctor: {doctor_email}")
+        
         # Get all diagnoses for the logged-in doctor
         diagnoses = list(diagnoses_collection.find(
-            {'doctor_email': session['email']}
+            {'doctor_email': doctor_email}
         ).sort('created_at', -1))
         
-        print(f"Found {len(diagnoses)} diagnoses for doctor {session['email']}")
+        print(f"Found {len(diagnoses)} diagnoses for doctor {doctor_email}")
         
-        # Group by phone number to get unique patients
+        # Group by patient identifier to get unique patients
         unique_patients = {}
         for diagnosis in diagnoses:
-            # Try to get phone from diagnosis first, then from patient record
-            phone = diagnosis.get('patient_phone', '')
+            # Try multiple ways to identify the patient
+            patient_key = None
             
-            # If no phone in diagnosis, try to get from patient record
-            if not phone:
-                patient = patients_collection.find_one({'_id': diagnosis['patient_id']})
-                if patient:
-                    phone = patient.get('phone', '')
+            # First try patient_email from diagnosis
+            if diagnosis.get('patient_email'):
+                patient_key = diagnosis['patient_email']
+            # Then try patient_phone from diagnosis
+            elif diagnosis.get('patient_phone'):
+                patient_key = diagnosis['patient_phone']
+            # Finally use patient_id as fallback
+            else:
+                patient_key = f"patient_{str(diagnosis['patient_id'])}"
             
-            # Use patient_id as fallback if no phone available
-            if not phone:
-                phone = f"patient_{str(diagnosis['patient_id'])}"
-            
-            if phone not in unique_patients:
+            if patient_key not in unique_patients:
                 # Get patient details from patients collection
                 patient = patients_collection.find_one({'_id': diagnosis['patient_id']})
                 if patient:
-                    unique_patients[phone] = {
+                    unique_patients[patient_key] = {
                         'patient_id': str(patient['_id']),
                         'name': patient.get('name', 'Unknown Patient'),
-                        'phone': phone,
-                        'email': patient.get('email', ''),
+                        'phone': patient.get('phone', diagnosis.get('patient_phone', '')),
+                        'email': patient.get('email', diagnosis.get('patient_email', '')),
                         'age': patient.get('age', ''),
                         'gender': patient.get('gender', ''),
                         'last_diagnosis': diagnosis.get('disease_name', ''),
@@ -418,10 +421,10 @@ def get_chat_patients():
                     }
                 else:
                     # If patient not found, use diagnosis data
-                    unique_patients[phone] = {
+                    unique_patients[patient_key] = {
                         'patient_id': str(diagnosis['patient_id']),
                         'name': diagnosis.get('patient_name', 'Unknown Patient'),
-                        'phone': phone,
+                        'phone': diagnosis.get('patient_phone', ''),
                         'email': diagnosis.get('patient_email', ''),
                         'age': '',
                         'gender': '',
@@ -434,15 +437,15 @@ def get_chat_patients():
                         'doctor_name': diagnosis.get('doctor_name', ''),
                         'report_id': diagnosis.get('report_id', '')
                     }
-            elif phone in unique_patients:
+            elif patient_key in unique_patients:
                 # Increment diagnosis count for existing patient
-                unique_patients[phone]['total_diagnoses'] += 1
+                unique_patients[patient_key]['total_diagnoses'] += 1
                 
                 # Update with more recent diagnosis if this one is newer
                 current_date = diagnosis['created_at']
-                existing_date = datetime.fromisoformat(unique_patients[phone]['last_diagnosis_date'].replace('Z', '+00:00'))
+                existing_date = datetime.fromisoformat(unique_patients[patient_key]['last_diagnosis_date'].replace('Z', '+00:00'))
                 if current_date > existing_date:
-                    unique_patients[phone].update({
+                    unique_patients[patient_key].update({
                         'last_diagnosis': diagnosis.get('disease_name', ''),
                         'last_diagnosis_date': diagnosis['created_at'].isoformat(),
                         'has_disease': diagnosis.get('has_disease', False),
@@ -455,7 +458,7 @@ def get_chat_patients():
         patients_list = list(unique_patients.values())
         patients_list.sort(key=lambda x: x['last_diagnosis_date'], reverse=True)
         
-        print(f"Returning {len(patients_list)} unique patients")
+        print(f"Returning {len(patients_list)} unique patients for doctor {doctor_email}")
         
         return jsonify({'success': True, 'patients': patients_list})
         
@@ -471,8 +474,28 @@ def get_chat_doctors():
 
     try:
         patient_email = session['email']
-        # Fetch diagnoses where this patient's email was recorded
+        print(f"Looking for doctors for patient: {patient_email}")
+        
+        # First try to find diagnoses by patient_email
         diagnoses = list(diagnoses_collection.find({'patient_email': patient_email}).sort('created_at', -1))
+        print(f"Found {len(diagnoses)} diagnoses by patient_email")
+        
+        # If no diagnoses found by email, try to find by patient record
+        if not diagnoses:
+            # Find patient record first
+            patient = patients_collection.find_one({'email': patient_email})
+            if patient:
+                # Find diagnoses by patient_id
+                diagnoses = list(diagnoses_collection.find({'patient_id': patient['_id']}).sort('created_at', -1))
+                print(f"Found {len(diagnoses)} diagnoses by patient_id")
+        
+        # If still no diagnoses, try to find by phone number
+        if not diagnoses:
+            patient = patients_collection.find_one({'email': patient_email})
+            if patient and patient.get('phone'):
+                # Find diagnoses by patient phone
+                diagnoses = list(diagnoses_collection.find({'patient_phone': patient['phone']}).sort('created_at', -1))
+                print(f"Found {len(diagnoses)} diagnoses by patient_phone")
 
         unique_doctors = {}
         for d in diagnoses:
@@ -495,10 +518,55 @@ def get_chat_doctors():
 
         doctors_list = list(unique_doctors.values())
         doctors_list.sort(key=lambda x: x['last_diagnosis_date'], reverse=True)
+        
+        print(f"Returning {len(doctors_list)} unique doctors for patient {patient_email}")
         return jsonify({'success': True, 'doctors': doctors_list})
     except Exception as e:
         print(f"Error fetching chat doctors: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+@app.route('/api/debug/session', methods=['GET'])
+def debug_session():
+    """Debug endpoint to check session data"""
+    return jsonify({
+        'session_data': dict(session),
+        'user_email': session.get('email'),
+        'user_role': session.get('role'),
+        'user_name': session.get('name')
+    })
+
+@app.route('/api/debug/diagnoses', methods=['GET'])
+def debug_diagnoses():
+    """Debug endpoint to check diagnoses data"""
+    if 'email' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        user_email = session['email']
+        user_role = session['role']
+        
+        if user_role == 'doctor':
+            # Get diagnoses by this doctor
+            diagnoses = list(diagnoses_collection.find({'doctor_email': user_email}).limit(10))
+        else:
+            # Get diagnoses for this patient
+            diagnoses = list(diagnoses_collection.find({'patient_email': user_email}).limit(10))
+        
+        # Convert ObjectIds to strings
+        for d in diagnoses:
+            d['_id'] = str(d['_id'])
+            d['patient_id'] = str(d['patient_id'])
+            d['created_at'] = d['created_at'].isoformat()
+        
+        return jsonify({
+            'success': True,
+            'user_email': user_email,
+            'user_role': user_role,
+            'diagnoses_count': len(diagnoses),
+            'diagnoses': diagnoses
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/messages', methods=['GET'])
 def get_messages():
