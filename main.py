@@ -590,16 +590,22 @@ def get_messages():
 def handle_join(data):
     room_id = data.get('room_id')
     if not room_id:
+        print("Join request missing room_id")
         return
+    print(f"User joining room: {room_id}")
     join_room(room_id)
     emit('system', {'message': 'Joined room', 'room_id': room_id})
+    print(f"User successfully joined room: {room_id}")
 
 @socketio.on('leave')
 def handle_leave(data):
     room_id = data.get('room_id')
     if not room_id:
+        print("Leave request missing room_id")
         return
+    print(f"User leaving room: {room_id}")
     leave_room(room_id)
+    print(f"User successfully left room: {room_id}")
 
 @socketio.on('chat_message')
 def handle_chat_message(data):
@@ -608,8 +614,17 @@ def handle_chat_message(data):
         text = data.get('text', '').strip()
         sender_email = data.get('sender_email')
         sender_role = data.get('sender_role')
+        
+        print(f"=== CHAT MESSAGE DEBUG ===")
+        print(f"Room ID: {room_id}")
+        print(f"Text: {text}")
+        print(f"Sender: {sender_email} ({sender_role})")
+        print(f"========================")
+        
         if not room_id or not text or not sender_email:
+            print(f"Missing required data: room_id={room_id}, text={text}, sender_email={sender_email}")
             return
+            
         message_doc = {
             'room_id': room_id,
             'text': text,
@@ -618,6 +633,8 @@ def handle_chat_message(data):
             'timestamp': datetime.now()
         }
         messages_collection.insert_one(message_doc)
+        print(f"Message saved to database with ID: {message_doc['_id']}")
+        
         # Broadcast to room
         emit('chat_message', {
             'room_id': room_id,
@@ -626,8 +643,12 @@ def handle_chat_message(data):
             'sender_role': sender_role,
             'timestamp': message_doc['timestamp'].isoformat()
         }, room=room_id)
+        print(f"Message broadcasted to room: {room_id}")
+        
     except Exception as e:
         print(f"Error handling chat_message: {e}")
+        import traceback
+        traceback.print_exc()
 
 @socketio.on('typing')
 def handle_typing(data):

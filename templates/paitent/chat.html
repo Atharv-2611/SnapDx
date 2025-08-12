@@ -37,12 +37,18 @@
         >
           Debug Session
         </button>
-        <button
-          onclick="debugDiagnoses()"
-          class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Debug Diagnoses
-        </button>
+                 <button
+           onclick="debugDiagnoses()"
+           class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+         >
+           Debug Diagnoses
+         </button>
+         <button
+           onclick="debugRoom()"
+           class="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+         >
+           Debug Room
+         </button>
       </div>
     </div>
 
@@ -158,17 +164,22 @@
     document.getElementById("chat-doctor-status").textContent = '';
     document.getElementById("message-input").disabled = false;
     document.getElementById("send-button").disabled = false;
+    
+    // Use consistent room ID generation - same as doctor side
     const roomId = `${doctorEmail.toLowerCase()}__${patientEmail.toLowerCase()}`;
     joinRoom(roomId);
     loadHistory(roomId);
   }
 
   function joinRoom(roomId) {
+    console.log(`Patient joining room: ${roomId}`);
     if (currentRoomId && currentRoomId !== roomId) {
+      console.log(`Patient leaving previous room: ${currentRoomId}`);
       socket.emit('leave', { room_id: currentRoomId });
     }
     currentRoomId = roomId;
-    socket.emit('join', { room_id });
+    socket.emit('join', { room_id: roomId });
+    console.log(`Patient joined room: ${roomId}`);
   }
 
   async function loadHistory(roomId) {
@@ -247,6 +258,8 @@
       timestamp: new Date().toISOString()
     };
     
+    console.log(`Patient sending message to room: ${currentRoomId}`, messageData);
+    
     // Add to UI
     const container = document.getElementById('messages-container');
     container.insertAdjacentHTML('beforeend', messageBubble(messageData));
@@ -258,7 +271,12 @@
   }
 
   socket.on('chat_message', (m) => {
-    if (m.room_id !== currentRoomId) return;
+    console.log(`Patient received message:`, m);
+    if (m.room_id !== currentRoomId) {
+      console.log(`Message room_id (${m.room_id}) doesn't match current room (${currentRoomId}), ignoring`);
+      return;
+    }
+    console.log(`Patient displaying message in room: ${currentRoomId}`);
     const container = document.getElementById('messages-container');
     container.insertAdjacentHTML('beforeend', messageBubble(m));
     container.scrollTop = container.scrollHeight;
@@ -397,6 +415,16 @@
       console.error('Debug diagnoses error:', e);
       alert('Debug diagnoses error: ' + e.message);
     }
+  }
+
+  function debugRoom() {
+    console.log('=== ROOM DEBUG INFO ===');
+    console.log('Current Room ID:', currentRoomId);
+    console.log('Current Doctor Email:', currentDoctorEmail);
+    console.log('Patient Email:', patientEmail);
+    console.log('Socket Connected:', socket.connected);
+    console.log('=======================');
+    alert(`Room Debug:\nCurrent Room: ${currentRoomId || 'None'}\nDoctor: ${currentDoctorEmail || 'None'}\nPatient: ${patientEmail}\nSocket: ${socket.connected ? 'Connected' : 'Disconnected'}`);
   }
 
   // Initialize
