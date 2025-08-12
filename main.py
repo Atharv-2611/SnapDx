@@ -4,13 +4,16 @@ from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 from disease_prediction import predictor
 from datetime import datetime
+
 import json
 import os
+import eventlet
+import eventlet.wsgi
 import numpy as np
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = 'supersecretkey'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 # MongoDB setup
 client = MongoClient("mongodb+srv://Arman:Motor9-Jumbo5-Antiquely7-Edition6-Undergrad7@snapdx.2ihkj4k.mongodb.net/?retryWrites=true&w=majority&appName=SnapDx")
