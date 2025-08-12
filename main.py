@@ -130,7 +130,10 @@ def paitent_chatbot():
 
 @app.route("/patient/chat")
 def paitent_chat():
-    return render_template("paitent/chat.html", user_email=session.get('email'))
+    if 'email' not in session or session.get('role') != 'patient':
+        return redirect(url_for('login'))
+    user_name = session.get('name', 'Patient')
+    return render_template("paitent/chat.html", user_name=user_name, user_email=session.get('email'))
 
 def convert_numpy_types(obj):
     """Convert NumPy types to Python native types for MongoDB serialization"""
@@ -557,6 +560,18 @@ def handle_chat_message(data):
         }, room=room_id)
     except Exception as e:
         print(f"Error handling chat_message: {e}")
+
+@socketio.on('typing')
+def handle_typing(data):
+    room_id = data.get('room_id')
+    if room_id:
+        emit('typing', data, room=room_id)
+
+@socketio.on('stop_typing')
+def handle_stop_typing(data):
+    room_id = data.get('room_id')
+    if room_id:
+        emit('stop_typing', data, room=room_id)
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=8888)

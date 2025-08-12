@@ -2,6 +2,20 @@
 {% block title %}Chat{% endblock %} 
 {% block content %}
 
+<!-- Welcome Header -->
+<div class="bg-blue-50 border-b border-blue-200 px-6 py-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-blue-900">Patient Chat</h1>
+      <p class="text-blue-700">Chat with doctors who have diagnosed you</p>
+    </div>
+    <div class="text-right">
+      <p class="text-sm text-blue-600">Welcome, {{ user_name }}</p>
+      <p class="text-xs text-blue-500">{{ user_email }}</p>
+    </div>
+  </div>
+</div>
+
 <!-- Chat Interface -->
 <div class="flex h-full pt-16">
   <!-- Doctor List Sidebar -->
@@ -105,10 +119,18 @@
             </div>
             <div class="ml-3">
               <p class="text-sm font-medium text-gray-900">${doctor.doctor_name||'Unknown Doctor'}</p>
-              <p class="text-sm text-gray-500">Last: ${doctor.last_diagnosis||''}</p>
+              <p class="text-sm text-gray-500">Last Diagnosis: ${doctor.last_diagnosis||''}</p>
+              <p class="text-xs text-gray-400">${new Date(doctor.last_diagnosis_date).toLocaleDateString()}</p>
             </div>
           </div>
-          <div class="flex flex-col items-end text-xs text-gray-500">${new Date(doctor.last_diagnosis_date).toLocaleDateString()}</div>
+          <div class="flex flex-col items-end text-xs text-gray-500">
+            <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+              <span class="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+              Online
+            </span>
+            <div class="mt-1">${new Date(doctor.last_diagnosis_date).toLocaleDateString()}</div>
+            <div class="mt-1 text-blue-600 font-medium">${doctor.report_id || ''}</div>
+          </div>
         </div>
       </div>
     `).join('');
@@ -167,7 +189,7 @@
 
   function messageBubble(m) {
     const isMe = m.sender_email && m.sender_email.toLowerCase() === patientEmail.toLowerCase();
-    const ts = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    const ts = m.timestamp ? formatTimestamp(new Date(m.timestamp)) : '';
     return `
       <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3">
         <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'}">
@@ -175,6 +197,22 @@
           <p class="text-xs ${isMe ? 'text-blue-100' : 'text-gray-500'} mt-1">${ts}</p>
         </div>
       </div>`;
+  }
+
+  function formatTimestamp(date) {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   }
 
   function escapeHtml(str) {
@@ -185,12 +223,23 @@
     const input = document.getElementById("message-input");
     const text = input.value.trim();
     if (!text || !currentRoomId) return;
-    socket.emit('chat_message', {
+    
+    // Add message to UI immediately
+    const messageData = {
       room_id: currentRoomId,
       text,
       sender_email: patientEmail,
-      sender_role: 'patient'
-    });
+      sender_role: 'patient',
+      timestamp: new Date().toISOString()
+    };
+    
+    // Add to UI
+    const container = document.getElementById('messages-container');
+    container.insertAdjacentHTML('beforeend', messageBubble(messageData));
+    container.scrollTop = container.scrollHeight;
+    
+    // Send via socket
+    socket.emit('chat_message', messageData);
     input.value = '';
   }
 
@@ -199,6 +248,61 @@
     const container = document.getElementById('messages-container');
     container.insertAdjacentHTML('beforeend', messageBubble(m));
     container.scrollTop = container.scrollHeight;
+  });
+
+  // Show typing indicator when doctor is typing
+  socket.on('typing', (data) => {
+    if (data.room_id !== currentRoomId) return;
+    showTypingIndicator('Doctor is typing...');
+  });
+
+  socket.on('stop_typing', (data) => {
+    if (data.room_id !== currentRoomId) return;
+    hideTypingIndicator();
+  });
+
+  // Add typing indicator functions
+  function showTypingIndicator(message) {
+    let typingDiv = document.getElementById('typing-indicator');
+    if (!typingDiv) {
+      typingDiv = document.createElement('div');
+      typingDiv.id = 'typing-indicator';
+      typingDiv.className = 'flex justify-start mb-3';
+      typingDiv.innerHTML = `
+        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-200 text-gray-900">
+          <div class="flex items-center space-x-2">
+            <div class="flex space-x-1">
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            </div>
+            <span class="text-sm text-gray-600">${message}</span>
+          </div>
+        </div>
+      `;
+      document.getElementById('messages-container').appendChild(typingDiv);
+    }
+    typingDiv.style.display = 'block';
+    document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
+  }
+
+  function hideTypingIndicator() {
+    const typingDiv = document.getElementById('typing-indicator');
+    if (typingDiv) {
+      typingDiv.style.display = 'none';
+    }
+  }
+
+  // Emit typing events
+  let typingTimer;
+  document.getElementById('message-input').addEventListener('input', function() {
+    if (currentRoomId) {
+      socket.emit('typing', { room_id: currentRoomId });
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        socket.emit('stop_typing', { room_id: currentRoomId });
+      }, 1000);
+    }
   });
 
   async function loadDoctors() {
