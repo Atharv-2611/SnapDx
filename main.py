@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from disease_prediction import predictor
 from datetime import datetime
 import json
+import os
 import numpy as np
 
 app = Flask(__name__, template_folder="templates")
@@ -663,4 +664,5 @@ def handle_stop_typing(data):
         emit('stop_typing', data, room=room_id)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0",port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)
