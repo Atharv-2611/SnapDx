@@ -663,4 +663,4 @@ def handle_stop_typing(data):
         emit('stop_typing', data, room=room_id)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8888)
+    socketio.run(app, host="0.0.0.0")
