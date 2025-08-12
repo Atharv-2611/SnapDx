@@ -136,55 +136,49 @@ History
     </div>
 
     <script>
-        // Sample patient data
-        const patients = [
-            {
-                id: 1,
-                name: "Sarah Johnson",
-                age: 28,
-                diagnosis: "Upper Respiratory Tract Infection",
-                date: "2024-01-15",
-                confidence: 87,
-                symptoms: "Fever, headache, cough",
-                treatment: "Rest, hydration, OTC pain relievers"
-            },
-            {
-                id: 2,
-                name: "Mike Chen",
-                age: 45,
-                diagnosis: "Hypertension",
-                date: "2024-01-14",
-                confidence: 92,
-                symptoms: "Headache, dizziness",
-                treatment: "Lifestyle modifications, medication review"
-            },
-            {
-                id: 3,
-                name: "Emily Davis",
-                age: 32,
-                diagnosis: "Lower Back Pain",
-                date: "2024-01-13",
-                confidence: 78,
-                symptoms: "Chronic back pain, limited mobility",
-                treatment: "Physical therapy, pain management"
-            },
-            {
-                id: 4,
-                name: "David Wilson",
-                age: 55,
-                diagnosis: "Type 2 Diabetes",
-                date: "2024-01-12",
-                confidence: 95,
-                symptoms: "Increased thirst, frequent urination",
-                treatment: "Blood sugar monitoring, diet modification"
-            }
-        ];
+        let diagnoses = [];
 
-        // Populate table
+        // Fetch diagnoses from backend
+        async function fetchDiagnoses() {
+            try {
+                const response = await fetch('/api/diagnoses');
+                const data = await response.json();
+                
+                if (data.success) {
+                    diagnoses = data.diagnoses;
+                    populateTable();
+                    updatePagination();
+                } else {
+                    console.error('Error fetching diagnoses:', data.error);
+                    showError('Failed to load patient records');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to load patient records');
+            }
+        }
+
+        // Populate table with real data
         function populateTable() {
             const tbody = document.getElementById('patient-records');
-            tbody.innerHTML = patients.map(patient => `
-                <tr class="hover:bg-gray-50 cursor-pointer" onclick="openModal(${patient.id})">
+            
+            if (diagnoses.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-folder-open text-4xl mb-2"></i>
+                                <p>No patient diagnoses found</p>
+                                <p class="text-sm">Start by creating your first diagnosis</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = diagnoses.map(diagnosis => `
+                <tr class="hover:bg-gray-50 cursor-pointer" onclick="openModal('${diagnosis._id}')">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
@@ -193,27 +187,29 @@ History
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <div class="text-sm font-medium text-gray-900">${patient.name}</div>
-                                <div class="text-sm text-gray-500">Age: ${patient.age}</div>
+                                <div class="text-sm font-medium text-gray-900">${diagnosis.patient_name}</div>
+                                <div class="text-sm text-gray-500">Report ID: ${diagnosis.report_id}</div>
                             </div>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${patient.diagnosis}</div>
+                        <div class="text-sm text-gray-900">${diagnosis.disease_name}</div>
+                        <div class="text-sm text-gray-500">${diagnosis.disease_type}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${new Date(patient.date).toLocaleDateString()}
+                        ${new Date(diagnosis.created_at).toLocaleDateString()}
                     </td>
-
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${patient.confidence}%
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${diagnosis.has_disease ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                            ${diagnosis.confidence_percentage}%
+                        </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button onclick="event.stopPropagation(); viewDetails(${patient.id})" class="text-blue-600 hover:text-blue-900 mr-3">
+                        <button onclick="event.stopPropagation(); viewDetails('${diagnosis._id}')" class="text-blue-600 hover:text-blue-900 mr-3">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button onclick="event.stopPropagation(); editPatient(${patient.id})" class="text-green-600 hover:text-green-900">
-                            <i class="fas fa-edit"></i>
+                        <button onclick="event.stopPropagation(); downloadReport('${diagnosis._id}')" class="text-green-600 hover:text-green-900">
+                            <i class="fas fa-download"></i>
                         </button>
                     </td>
                 </tr>
@@ -232,31 +228,36 @@ History
         });
 
         // Modal functions
-        function openModal(patientId) {
-            const patient = patients.find(p => p.id === patientId);
-            if (!patient) return;
+        function openModal(diagnosisId) {
+            const diagnosis = diagnoses.find(d => d._id === diagnosisId);
+            if (!diagnosis) return;
             
-            document.getElementById('modal-patient-name').textContent = patient.name;
+            document.getElementById('modal-patient-name').textContent = diagnosis.patient_name;
             document.getElementById('modal-content').innerHTML = `
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <h4 class="font-medium text-gray-900">Patient Information</h4>
-                        <p class="text-sm text-gray-600">Age: ${patient.age}</p>
-                        <p class="text-sm text-gray-600">Diagnosis Date: ${new Date(patient.date).toLocaleDateString()}</p>
+                        <p class="text-sm text-gray-600">Name: ${diagnosis.patient_name}</p>
+                        <p class="text-sm text-gray-600">Report ID: ${diagnosis.report_id}</p>
+                        <p class="text-sm text-gray-600">Date: ${new Date(diagnosis.created_at).toLocaleDateString()}</p>
                     </div>
                     <div>
                         <h4 class="font-medium text-gray-900">Diagnosis</h4>
-                        <p class="text-sm text-gray-600">${patient.diagnosis}</p>
-                        <p class="text-sm text-gray-600">Confidence: ${patient.confidence}%</p>
+                        <p class="text-sm text-gray-600">Disease: ${diagnosis.disease_name}</p>
+                        <p class="text-sm text-gray-600">Type: ${diagnosis.disease_type}</p>
+                        <p class="text-sm text-gray-600">Confidence: ${diagnosis.confidence_percentage}%</p>
                     </div>
                 </div>
                 <div>
-                    <h4 class="font-medium text-gray-900">Symptoms</h4>
-                    <p class="text-sm text-gray-600">${patient.symptoms}</p>
+                    <h4 class="font-medium text-gray-900">AI Analysis Results</h4>
+                    <p class="text-sm text-gray-600">Has Disease: <span class="font-medium ${diagnosis.has_disease ? 'text-red-600' : 'text-green-600'}">${diagnosis.has_disease ? 'Yes' : 'No'}</span></p>
+                    <p class="text-sm text-gray-600">Probability: ${(diagnosis.probability * 100).toFixed(2)}%</p>
+                    <p class="text-sm text-gray-600">Total Images: ${diagnosis.total_images}</p>
                 </div>
                 <div>
-                    <h4 class="font-medium text-gray-900">Treatment</h4>
-                    <p class="text-sm text-gray-600">${patient.treatment}</p>
+                    <h4 class="font-medium text-gray-900">Doctor Information</h4>
+                    <p class="text-sm text-gray-600">Doctor: ${diagnosis.doctor_name}</p>
+                    <p class="text-sm text-gray-600">Email: ${diagnosis.doctor_email}</p>
                 </div>
             `;
             
@@ -267,18 +268,37 @@ History
             document.getElementById('patient-modal').classList.add('hidden');
         }
 
-        function viewDetails(patientId) {
-            openModal(patientId);
+        function viewDetails(diagnosisId) {
+            openModal(diagnosisId);
         }
 
-        function editPatient(patientId) {
-            alert(`Edit patient ${patientId} - This would open an edit form`);
+        function downloadReport(diagnosisId) {
+            const diagnosis = diagnoses.find(d => d._id === diagnosisId);
+            if (diagnosis) {
+                alert(`Downloading report for ${diagnosis.patient_name} (${diagnosis.report_id})`);
+                // Here you would implement actual PDF download functionality
+            }
         }
 
+        function showError(message) {
+            // You can implement a proper error notification system here
+            console.error(message);
+            alert(message);
+        }
 
+        function updatePagination() {
+            // Update pagination info
+            const totalResults = diagnoses.length;
+            const paginationInfo = document.querySelector('.text-sm.text-gray-700');
+            if (paginationInfo) {
+                paginationInfo.innerHTML = `
+                    Showing <span class="font-medium">1</span> to <span class="font-medium">${Math.min(10, totalResults)}</span> of <span class="font-medium">${totalResults}</span> results
+                `;
+            }
+        }
 
         // Initialize table
-        populateTable();
+        fetchDiagnoses();
     </script>
 
 {% endblock %}

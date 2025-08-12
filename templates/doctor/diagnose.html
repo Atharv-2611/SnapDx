@@ -1,4 +1,4 @@
-{% extends 'doctor/layout/index.html'%}
+1{% extends 'doctor/layout/index.html'%}
 {% block title %} 
 Diagnosis
 {% endblock %}
@@ -459,7 +459,7 @@ Diagnosis
             }
         });
 
-        // Handle form submission - Generate report directly
+        // Handle form submission - Send to backend for AI prediction
         document.getElementById('diagnosis-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -468,14 +468,99 @@ Diagnosis
                 return;
             }
 
-            // Get analysis data for selected disease
-            currentAnalysis = diseaseData[selectedDisease].analysis;
-            
-            // Generate report immediately
-            generateReport();
+            if (uploadedImages.length === 0) {
+                alert('Please upload at least one image for diagnosis.');
+                return;
+            }
+
+            // Show loading state
+            const submitBtn = document.getElementById('generate-report-btn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+            submitBtn.disabled = true;
+
+            // Prepare data for backend
+            const formData = {
+                patient_name: document.getElementById('patient-name').value,
+                patient_age: document.getElementById('patient-age').value,
+                patient_gender: document.getElementById('patient-gender').value,
+                patient_phone: document.getElementById('patient-phone').value,
+                disease_type: selectedDisease,
+                images: uploadedImages
+            };
+
+            // Send to backend
+            fetch('/api/diagnose', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Generate report with real AI prediction
+                    generateReportWithPrediction(data);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during diagnosis. Please try again.');
+            })
+            .finally(() => {
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
         });
 
-        // Generate report function
+        // Generate report function with real AI prediction
+        function generateReportWithPrediction(data) {
+            const currentDate = new Date().toLocaleDateString();
+            
+            // Populate report with real data
+            document.getElementById('report-id').textContent = data.report_id;
+            document.getElementById('report-date').textContent = currentDate;
+            document.getElementById('report-patient-name').textContent = data.patient_info.name;
+            document.getElementById('report-patient-age').textContent = data.patient_info.age;
+            document.getElementById('report-patient-gender').textContent = data.patient_info.gender;
+            document.getElementById('report-patient-phone').textContent = data.patient_info.phone;
+            document.getElementById('report-disease-type').textContent = diseaseData[selectedDisease].name;
+            document.getElementById('report-confidence').textContent = data.prediction.confidence_percentage + '%';
+            
+            // Update disease summary based on prediction
+            let summary = diseaseData[selectedDisease].diseaseSummary;
+            if (data.prediction.has_disease) {
+                summary += `\n\nAI Analysis Result: The model has detected ${data.prediction.disease_name} with ${data.prediction.confidence_percentage}% confidence.`;
+            } else {
+                summary += `\n\nAI Analysis Result: The model indicates normal/benign findings with ${data.prediction.confidence_percentage}% confidence.`;
+            }
+            document.getElementById('report-disease-summary').textContent = summary;
+
+            // Populate uploaded images
+            const reportImagesContainer = document.getElementById('report-uploaded-images');
+            if (uploadedImages.length > 0) {
+                reportImagesContainer.innerHTML = uploadedImages.map((imageData, index) => `
+                    <div class="text-center">
+                        <img src="${imageData}" class="w-full h-24 object-cover rounded-lg mb-2" alt="Medical Image ${index + 1}">
+                        <p class="text-xs text-gray-600">Image ${index + 1}</p>
+                    </div>
+                `).join('');
+            } else {
+                reportImagesContainer.innerHTML = '<p class="text-gray-500 text-sm">No images uploaded</p>';
+            }
+
+            // Show generated report
+            document.getElementById('generated-report').classList.remove('hidden');
+            
+            // Scroll to report
+            document.getElementById('generated-report').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Legacy function for backward compatibility
         function generateReport() {
             const reportId = 'SNAP' + Date.now();
             const currentDate = new Date().toLocaleDateString();
