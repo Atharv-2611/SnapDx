@@ -249,6 +249,73 @@ def diagnose_disease():
         print(f"Diagnosis error: {e}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
+@app.route("/api/report/<report_id>", methods=['GET'])
+def get_report_by_id(report_id):
+    """Get diagnosis report by report ID for patient chatbot"""
+    try:
+        # Find diagnosis by report_id
+        diagnosis = diagnoses_collection.find_one({'report_id': report_id})
+        
+        if not diagnosis:
+            return jsonify({'success': False, 'error': 'Report not found'}), 404
+        
+        # Get patient information
+        patient = patients_collection.find_one({'_id': diagnosis['patient_id']})
+        
+        if not patient:
+            return jsonify({'success': False, 'error': 'Patient information not found'}), 404
+        
+        # Prepare response data
+        report_data = {
+            'success': True,
+            'report_id': diagnosis['report_id'],
+            'patientName': patient['name'],
+            'patientAge': patient['age'],
+            'patientGender': patient['gender'],
+            'primaryDiagnosis': diagnosis['disease_name'],
+            'confidence': diagnosis['confidence_percentage'],
+            'severity': 'Moderate' if diagnosis['has_disease'] else 'Normal',
+            'detectedConditions': [
+                diagnosis['disease_name'] if diagnosis['has_disease'] else 'Normal findings'
+            ],
+            'keyFindings': [
+                f"AI detected {diagnosis['disease_name']}" if diagnosis['has_disease'] else "No abnormalities detected"
+            ],
+            'treatmentSuggestions': [
+                "Follow doctor's prescribed treatment plan",
+                "Complete full course of medications",
+                "Attend follow-up appointments",
+                "Monitor symptoms regularly"
+            ],
+            'precautions': [
+                "Take medications as prescribed",
+                "Avoid strenuous activities if advised",
+                "Maintain good hygiene",
+                "Get adequate rest",
+                "Stay hydrated"
+            ],
+            'medications': [
+                {
+                    'name': 'Prescribed medication',
+                    'dosage': 'As per doctor\'s prescription',
+                    'frequency': 'As directed',
+                    'duration': 'Complete full course',
+                    'instructions': 'Follow doctor\'s instructions'
+                }
+            ],
+            'doctor_name': diagnosis.get('doctor_name', 'Doctor'),
+            'created_at': diagnosis['created_at'].isoformat(),
+            'disease_type': diagnosis['disease_type'],
+            'has_disease': diagnosis['has_disease'],
+            'probability': diagnosis['probability']
+        }
+        
+        return jsonify(report_data)
+        
+    except Exception as e:
+        print(f"Error fetching report: {e}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
 @app.route("/api/diagnoses", methods=['GET'])
 def get_diagnoses():
     """Get all diagnoses for the logged-in doctor"""

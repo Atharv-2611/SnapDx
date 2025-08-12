@@ -1,4 +1,4 @@
-1{% extends 'doctor/layout/index.html'%}
+{% extends 'doctor/layout/index.html'%}
 {% block title %} 
 Diagnosis
 {% endblock %}
@@ -31,6 +31,25 @@ Diagnosis
                 page-break-before: always;
             }
         }
+
+        /* Hospital report styling */
+        .report-paper {
+            width: 100%;
+            max-width: 794px; /* A4 width at 96dpi */
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .report-section-title {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+        .report-kv p { margin: 2px 0; }
+        .report-header { border-bottom: 1px solid #e5e7eb; }
+        .report-footer { border-top: 1px solid #e5e7eb; }
+        .report-images img { border-radius: 6px; border: 1px solid #e5e7eb; object-fit: cover; width: 100%; height: 120px; }
 {% endblock %}
 
 {% block content %}
@@ -192,91 +211,179 @@ Diagnosis
         <!-- Generated Report -->
         <div id="generated-report" class="px-4 py-6 sm:px-0 hidden">
             <div class="bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-lg font-medium text-gray-900">Generated Medical Report</h2>
+                <div class="report-paper" id="inline-hospital-report">
+                    <!-- Header -->
+                    <div class="report-header px-6 py-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-lg font-semibold text-gray-900">SnapDx Medical Center</p>
+                        </div>
+                        <div class="text-right text-sm text-gray-700">
+                            <p>Report ID: <span id="report-id">Loading...</span></p>
+                            <p>Date: <span id="report-date">Loading...</span></p>
+                        </div>
                 </div>
                 
-                <div class="p-6">
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <div class="flex items-center justify-between">
+                    <!-- Body -->
+                    <div class="px-6 py-5 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
-                                <h3 class="text-lg font-semibold text-blue-900">Report ID</h3>
-                                <p id="report-id" class="text-2xl font-bold text-blue-600">Loading...</p>
+                                <p class="report-section-title">Patient Information</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Name: <span id="report-patient-name">-</span></p>
+                                    <p>Gender: <span id="report-patient-gender">-</span></p>
+                                    <p>Age: <span id="report-patient-age">-</span></p>
+                                    <p>Phone: <span id="report-patient-phone">-</span></p>
+                                    <p>Email: <span id="report-patient-email">-</span></p>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm text-blue-700">Generated on</p>
-                                <p id="report-date" class="text-sm text-blue-700">Loading...</p>
+                            <div>
+                                <p class="report-section-title">Diagnosis</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Disease: <span id="report-disease">-</span></p>
+                                    <p>Type: <span id="report-disease-type">-</span></p>
+                                    <p>Confidence: <span id="report-confidence">-</span></p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="space-y-6">
-                        <!-- Patient Information Row -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <p class="report-section-title">AI Analysis Results</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Has Disease: <span id="report-has-disease" class="font-medium">-</span></p>
+                                    <p>Probability: <span id="report-probability">-</span></p>
+                                    <p>Total Images: <span id="report-total-images">-</span></p>
+                                </div>
+                            </div>
                         <div>
-                            <h3 class="font-medium text-gray-900 mb-2">Patient Information</h3>
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                    <div><strong>Name:</strong> <span id="report-patient-name">-</span></div>
-                                    <div><strong>Age:</strong> <span id="report-patient-age">-</span></div>
-                                    <div><strong>Gender:</strong> <span id="report-patient-gender">-</span></div>
-                                    <div><strong>Contact:</strong> <span id="report-patient-phone">-</span></div>
-                                        <div><strong>Email:</strong> <span id="report-patient-email">-</span></div>
+                                <p class="report-section-title">Doctor Information</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Doctor: <span id="report-doctor-name">-</span></p>
+                                    <p>Email: <span id="report-doctor-email">-</span></p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Disease Information Row -->
                         <div>
-                            <h3 class="font-medium text-gray-900 mb-2">Disease Information</h3>
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <div><strong>Disease Type:</strong> <span id="report-disease-type">-</span></div>
-                                    <div><strong>Confidence Level:</strong> <span id="report-confidence">-</span></div>
+                            <p class="report-section-title">Disease Summary</p>
+                            <div class="text-sm text-gray-700 leading-relaxed">
+                                <div id="report-disease-summary">-</div>
+                            </div>
                                 </div>
+
                                 <div>
-                                    <strong>Disease Summary:</strong>
-                                    <div id="report-disease-summary" class="mt-2 text-gray-900 text-sm leading-relaxed">-</div>
+                            <p class="report-section-title">Uploaded Images</p>
+                            <div id="report-uploaded-images" class="report-images grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+                        </div>
+
+                        <div class="report-footer pt-4 text-xs text-gray-500">
+                            <p>Note: This report is generated by AI assistance and reviewed by the attending clinician.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Uploaded Images Row -->
-                        <div>
-                            <h3 class="font-medium text-gray-900 mb-2">Uploaded Images</h3>
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <div id="report-uploaded-images" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <!-- Images will be populated here -->
+                <!-- Action buttons below the report -->
+                <div class="mt-6 flex justify-center items-center">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-600 mb-3">Use report ID for consultation</p>
+                        <button id="print-report-btn" 
+                                class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center mx-auto shadow-md transition-colors duration-200">
+                            <i class="fas fa-print mr-2"></i>
+                            Print Report
+                        </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-6 flex justify-between items-center">
+        <!-- Generated Report Modal (matches screenshot layout) -->
+        <div id="generated-report-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+            <div class="relative top-8 mx-auto p-4 w-11/12 md:w-4/5 lg:w-3/4">
+                <div class="report-paper" id="printable-hospital-report">
+                    <!-- Header -->
+                    <div class="report-header px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="h-10 w-10">
+                            <div>
+                                <p class="text-lg font-semibold text-gray-900">SnapDx Medical Center</p>
+                                <p class="text-xs text-gray-500">123 Health Ave, MedCity • (+1) 555-0100 • support@snapdx.ai</p>
+                            </div>
+                        </div>
+                        <div class="text-right text-sm text-gray-700">
+                            <p>Report ID: <span id="grm-report-id">-</span></p>
+                            <p>Date: <span id="grm-report-date">-</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="px-6 py-5 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <p class="report-section-title">Patient Information</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Name: <span id="grm-patient-name">-</span></p>
+                                    <p>Gender: <span id="grm-patient-gender">-</span></p>
+                                    <p>Age: <span id="grm-patient-age">-</span></p>
+                                    <p>Phone: <span id="grm-patient-phone">-</span></p>
+                                    <p>Email: <span id="grm-patient-email">-</span></p>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="report-section-title">Diagnosis</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Disease: <span id="grm-disease">-</span></p>
+                                    <p>Type: <span id="grm-disease-type">-</span></p>
+                                    <p>Confidence: <span id="grm-confidence">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <p class="report-section-title">AI Analysis Results</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Has Disease: <span id="grm-has-disease" class="font-medium">-</span></p>
+                                    <p>Probability: <span id="grm-probability">-</span></p>
+                                    <p>Total Images: <span id="grm-total-images">-</span></p>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="report-section-title">Doctor Information</p>
+                                <div class="report-kv text-sm text-gray-700">
+                                    <p>Doctor: <span id="grm-doctor-name">-</span></p>
+                                    <p>Email: <span id="grm-doctor-email">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+
                     <div>
-                            <p class="text-sm text-gray-600">Use report ID for consultation</p>
+                            <p class="report-section-title">Uploaded Images</p>
+                            <div id="grm-images-container" class="report-images grid grid-cols-2 md:grid-cols-4 gap-3"></div>
                         </div>
-                        <div class="flex space-x-3">
-                            <button id="print-report-btn" 
-                                    class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center">
-                                <i class="fas fa-print mr-2"></i>
-                                Print Report
-                            </button>
-                            <button id="download-report-btn" 
-                                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center">
-                                <i class="fas fa-download mr-2"></i>
-                                Download PDF
-                            </button>
+
+                        <div class="report-footer pt-4 text-xs text-gray-500">
+                            <p>Note: This report is generated by AI assistance and reviewed by the attending clinician.</p>
                         </div>
                     </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 mt-4">
+                    <button onclick="closeGeneratedReportModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Close</button>
+                    <button onclick="downloadReportAsPDF()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Download PDF</button>
+                    <button onclick="editGeneratedRecord()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Edit Record</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- html2pdf for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
     <script>
         let selectedDisease = '';
         let currentAnalysis = null;
         let uploadedImages = []; // Store uploaded images for report
+        let latestReportData = null; // keep last generated data for export
 
         // Disease-specific data and analysis results
         const diseaseData = {
@@ -535,11 +642,29 @@ Diagnosis
             document.getElementById('report-patient-age').textContent = data.patient_info.age;
             document.getElementById('report-patient-gender').textContent = data.patient_info.gender;
             document.getElementById('report-patient-phone').textContent = data.patient_info.phone;
-            document.getElementById('report-disease-type').textContent = diseaseData[selectedDisease].name;
-            document.getElementById('report-confidence').textContent = data.prediction.confidence_percentage + '%';
             if (data.patient_info.email) {
                 document.getElementById('report-patient-email').textContent = data.patient_info.email;
             }
+            
+            // Populate new report fields
+            const diseaseNice = data.prediction.has_disease ? data.prediction.disease_name : 'Normal';
+            const probabilityPercent = (Number(data.prediction.probability || 0) * 100).toFixed(2) + '%';
+            const confidencePercent = (Number(data.prediction.confidence_percentage || 0)).toFixed(2) + '%';
+            
+            document.getElementById('report-disease').textContent = diseaseNice;
+            document.getElementById('report-disease-type').textContent = diseaseData[selectedDisease].name;
+            document.getElementById('report-confidence').textContent = confidencePercent;
+            
+            const hasDiseaseEl = document.getElementById('report-has-disease');
+            hasDiseaseEl.textContent = data.prediction.has_disease ? 'Yes' : 'No';
+            hasDiseaseEl.classList.remove('text-green-600', 'text-red-600');
+            hasDiseaseEl.classList.add(data.prediction.has_disease ? 'text-red-600' : 'text-green-600');
+            
+            document.getElementById('report-probability').textContent = probabilityPercent;
+            document.getElementById('report-total-images').textContent = String(uploadedImages.length || 0);
+            
+            document.getElementById('report-doctor-name').textContent = `${"{{ user_name }}"}`;
+            document.getElementById('report-doctor-email').textContent = `${"{{ user_email }}"}`;
             
             // Update disease summary based on prediction
             let summary = diseaseData[selectedDisease].diseaseSummary;
@@ -554,9 +679,9 @@ Diagnosis
             const reportImagesContainer = document.getElementById('report-uploaded-images');
             if (uploadedImages.length > 0) {
                 reportImagesContainer.innerHTML = uploadedImages.map((imageData, index) => `
-                    <div class="text-center">
-                        <img src="${imageData}" class="w-full h-24 object-cover rounded-lg mb-2" alt="Medical Image ${index + 1}">
-                        <p class="text-xs text-gray-600">Image ${index + 1}</p>
+                    <div>
+                        <img src="${imageData}" alt="Image ${index + 1}">
+                        <p class="text-center text-xs text-gray-500 mt-1">Image ${index + 1}</p>
                     </div>
                 `).join('');
             } else {
@@ -568,6 +693,9 @@ Diagnosis
             
             // Scroll to report
             document.getElementById('generated-report').scrollIntoView({ behavior: 'smooth' });
+
+            // Store latest report data for potential future use
+            latestReportData = data;
         }
 
         // Legacy function for backward compatibility
@@ -611,9 +739,173 @@ Diagnosis
             window.print();
         });
 
-        // Download report
+        // Download report (from inline section) -> use the inline report for PDF export
         document.getElementById('download-report-btn').addEventListener('click', function() {
-            alert('PDF download functionality would be implemented here');
+            // Use the inline report for PDF export
+            const report = document.getElementById('inline-hospital-report');
+            if (!report) return;
+            const reportId = (document.getElementById('report-id')?.textContent || 'SNAPReport').trim();
+
+            // Create a temporary container with only the report content
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '0';
+            tempContainer.style.width = '794px'; // A4 width
+            tempContainer.style.backgroundColor = '#ffffff';
+            tempContainer.style.padding = '20px';
+            tempContainer.style.margin = '0';
+            
+            // Clone the report content
+            const reportClone = report.cloneNode(true);
+            tempContainer.appendChild(reportClone);
+            document.body.appendChild(tempContainer);
+
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `${reportId}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    allowTaint: true, 
+                    backgroundColor: '#ffffff',
+                    width: 794,
+                    height: tempContainer.scrollHeight
+                },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] }
+            };
+
+            if (typeof html2pdf === 'undefined') {
+                alert('PDF export library failed to load. Please check your internet connection.');
+                return;
+            }
+
+            // Force inline styles for Tailwind classes in the captured node
+            inlineComputedStyles(tempContainer);
+            
+            // Small timeout ensures DOM updates (images/text) are applied before capture
+            setTimeout(() => {
+                html2pdf().set(opt).from(tempContainer).save().then(() => {
+                    // Clean up the temporary container
+                    document.body.removeChild(tempContainer);
+                });
+            }, 200);
+
+            // Helper: copy computed styles into inline style to improve canvas capture
+            function inlineComputedStyles(root) {
+                const treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null, false);
+                while (treeWalker.nextNode()) {
+                    const el = treeWalker.currentNode;
+                    const cs = window.getComputedStyle(el);
+                    const style = [
+                        'color', 'backgroundColor', 'fontSize', 'fontFamily', 'fontWeight', 'lineHeight',
+                        'textAlign', 'border', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft',
+                        'borderColor', 'borderRadius', 'padding', 'margin', 'display', 'width', 'height'
+                    ];
+                    style.forEach(prop => el.style[prop] = cs[prop]);
+                }
+            }
         });
+
+        // Modal helpers for generated report
+        function openGeneratedReportModal(data) {
+            const diseaseNice = data.prediction.has_disease ? data.prediction.disease_name : 'Normal';
+            const probabilityPercent = (Number(data.prediction.probability || 0) * 100).toFixed(2) + '%';
+            const confidencePercent = (Number(data.prediction.confidence_percentage || 0)).toFixed(2) + '%';
+
+            document.getElementById('grm-patient-name').textContent = data.patient_info.name || '-';
+            document.getElementById('grm-report-id').textContent = data.report_id || '-';
+            document.getElementById('grm-report-date').textContent = new Date().toLocaleDateString();
+            document.getElementById('grm-patient-gender').textContent = data.patient_info.gender || '-';
+            document.getElementById('grm-patient-age').textContent = data.patient_info.age ?? '-';
+            document.getElementById('grm-patient-phone').textContent = data.patient_info.phone || '-';
+            document.getElementById('grm-patient-email').textContent = data.patient_info.email || '-';
+
+            const hasDiseaseEl = document.getElementById('grm-has-disease');
+            hasDiseaseEl.textContent = data.prediction.has_disease ? 'Yes' : 'No';
+            hasDiseaseEl.classList.remove('text-green-600', 'text-red-600');
+            hasDiseaseEl.classList.add(data.prediction.has_disease ? 'text-red-600' : 'text-green-600');
+
+            document.getElementById('grm-probability').textContent = probabilityPercent;
+            document.getElementById('grm-total-images').textContent = String(uploadedImages.length || 0);
+
+            document.getElementById('grm-doctor-name').textContent = `${"{{ user_name }}"}`;
+            document.getElementById('grm-doctor-email').textContent = `${"{{ user_email }}"}`;
+
+            document.getElementById('grm-disease').textContent = diseaseNice;
+            document.getElementById('grm-disease-type').textContent = (diseaseData[selectedDisease]?.name) || selectedDisease || '-';
+            document.getElementById('grm-confidence').textContent = confidencePercent;
+
+            // Populate uploaded images into the report
+            const imgs = document.getElementById('grm-images-container');
+            if (imgs) {
+                if (uploadedImages.length > 0) {
+                    imgs.innerHTML = uploadedImages.map((imageData, index) => `
+                        <div>
+                            <img src="${imageData}" alt="Image ${index + 1}">
+                            <p class="text-center text-xs text-gray-500 mt-1">Image ${index + 1}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    imgs.innerHTML = '<p class="text-gray-500 text-sm">No images uploaded</p>';
+                }
+            }
+
+            document.getElementById('generated-report-modal').classList.remove('hidden');
+        }
+
+        function closeGeneratedReportModal() {
+            document.getElementById('generated-report-modal').classList.add('hidden');
+        }
+
+        function editGeneratedRecord() {
+            // Placeholder for edit action – hook up to your edit workflow if needed
+            alert('Edit record functionality will be implemented here.');
+        }
+
+        function downloadReportAsPDF() {
+            // Ensure the modal content is prepared
+            if (document.getElementById('generated-report-modal').classList.contains('hidden') && latestReportData) {
+                openGeneratedReportModal(latestReportData);
+            }
+            const report = document.getElementById('printable-hospital-report');
+            if (!report) return;
+            const reportId = (document.getElementById('grm-report-id')?.textContent || 'SNAPReport').trim();
+
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `${reportId}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] }
+            };
+
+            if (typeof html2pdf === 'undefined') {
+                alert('PDF export library failed to load. Please check your internet connection.');
+                return;
+            }
+            // Force inline styles for Tailwind classes in the captured node
+            inlineComputedStyles(report);
+            // Small timeout ensures DOM updates (images/text) are applied before capture
+            setTimeout(() => html2pdf().set(opt).from(report).save(), 200);
+
+            // Helper: copy computed styles into inline style to improve canvas capture
+            function inlineComputedStyles(root) {
+                const treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null, false);
+                while (treeWalker.nextNode()) {
+                    const el = treeWalker.currentNode;
+                    const cs = window.getComputedStyle(el);
+                    const style = [
+                        'color', 'backgroundColor', 'fontSize', 'fontFamily', 'fontWeight', 'lineHeight',
+                        'textAlign', 'border', 'borderTop', 'borderRight', 'borderBottom', 'borderLeft',
+                        'borderColor', 'borderRadius', 'padding', 'margin', 'display', 'width', 'height'
+                    ];
+                    style.forEach(prop => el.style[prop] = cs[prop]);
+                }
+            }
+        }
     </script>
 {% endblock %}
