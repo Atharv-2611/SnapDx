@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - SnapDx</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-green-100">
+        <i class="fas fa-user-plus text-green-600 text-xl"></i>
+      </div>
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Create your SnapDx account</h2>
+      <p class="mt-2 text-center text-sm text-gray-600">Register as a doctor or patient</p>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="bg-red-100 text-red-700 px-4 py-2 rounded">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <!-- Role Selection -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-3">Select Your Role</label>
+        <div class="grid grid-cols-2 gap-4">
+          <button id="doctor-role" class="role-btn bg-green-600 text-white p-4 rounded-lg border-2 border-green-600 hover:bg-green-700 transition-colors">
+            <i class="fas fa-user-md text-2xl mb-2"></i>
+            <div class="text-sm font-medium">Doctor</div>
+          </button>
+          <button id="patient-role" class="role-btn bg-gray-100 text-gray-700 p-4 rounded-lg border-2 border-gray-300 hover:bg-gray-200 transition-colors">
+            <i class="fas fa-user text-2xl mb-2"></i>
+            <div class="text-sm font-medium">Patient</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <form class="space-y-6" id="register-form" method="POST" action="/register">
+        <input type="hidden" name="role" id="role-input" value="doctor" />
+
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+          <div class="mt-1">
+            <input id="name" name="name" type="text" required class="appearance-none block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="Enter your full name" />
+          </div>
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+          <div class="mt-1">
+            <input id="email" name="email" type="email" required class="appearance-none block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="Enter your email" />
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+          <div class="mt-1">
+            <input id="password" name="password" type="password" required class="appearance-none block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="Enter your password" />
+          </div>
+        </div>
+
+        <div>
+          <button type="submit" class="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none">Register</button>
+        </div>
+      </form>
+    </div>
+    <div class="text-center mt-4">
+      <a href="/login" class="text-green-600 hover:underline">Already have an account? Sign in</a>
+    </div>
+  </div>
+
+  <script>
+    let selectedRole = "doctor"; // default
+
+    function updateRoleButtons() {
+      const doctorBtn = document.getElementById('doctor-role');
+      const patientBtn = document.getElementById('patient-role');
+      
+      if (selectedRole === 'doctor') {
+        // Doctor selected
+        doctorBtn.className = 'role-btn bg-green-600 text-white p-4 rounded-lg border-2 border-green-600 hover:bg-green-700 transition-colors';
+        patientBtn.className = 'role-btn bg-gray-100 text-gray-700 p-4 rounded-lg border-2 border-gray-300 hover:bg-gray-200 transition-colors';
+      } else {
+        // Patient selected
+        doctorBtn.className = 'role-btn bg-gray-100 text-gray-700 p-4 rounded-lg border-2 border-gray-300 hover:bg-gray-200 transition-colors';
+        patientBtn.className = 'role-btn bg-green-600 text-white p-4 rounded-lg border-2 border-green-600 hover:bg-green-700 transition-colors';
+      }
+    }
+
+    document.querySelectorAll('.role-btn').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        selectedRole = this.id.replace('-role', '');
+        document.getElementById('role-input').value = selectedRole;
+        
+        // Update UI
+        updateRoleButtons();
+      });
+    });
+
+    // Initialize button states
+    updateRoleButtons();
+  </script>
+</body>
+</html>

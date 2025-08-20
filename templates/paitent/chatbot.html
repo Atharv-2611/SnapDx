@@ -1,0 +1,799 @@
+{% extends 'paitent/layout/index.html' %}
+{% block title %}Chatbot {% endblock %}
+
+{% block content %}
+<div class="flex h-full pt-16">
+      <!-- Chat Area -->
+      <div class="flex-1 flex flex-col">
+        <!-- Chat Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+          <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10">
+              <div
+                class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"
+              >
+                <i class="fas fa-robot text-blue-600"></i>
+              </div>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-medium text-gray-900">
+                SnapDx AI Assistant
+              </h3>
+              <p class="text-sm text-gray-500">Powered by Gemini AI</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto p-6" id="messages-container">
+          <!-- Welcome Message -->
+          <div class="flex justify-start mb-4">
+            <div
+              class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-blue-600 text-white"
+            >
+              <p class="text-sm">
+                Hello! I'm your SnapDx AI Assistant powered by Gemini AI. I can
+                help you with:
+              </p>
+              <ul class="text-sm mt-2 space-y-1">
+                <li>• Health consultation using your report ID</li>
+                <li>• Treatment recommendations</li>
+                <li>• Medication information</li>
+                <li>• Lifestyle advice</li>
+                <li>• Emergency guidance</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Report ID Request Message -->
+          <div class="flex justify-start mb-4">
+            <div
+              class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-200 text-gray-900"
+            >
+              <p class="text-sm">
+                To start your consultation, please send me your Report ID.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="bg-white border-t border-gray-200 px-6 py-4">
+          <div class="flex items-center space-x-4">
+            <div class="flex-1">
+              <input
+                type="text"
+                id="message-input"
+                placeholder="Type your Report ID or ask a question..."
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              id="send-button"
+              class="p-2 text-blue-600 hover:text-blue-700"
+            >
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consultation Panel -->
+      <div class="w-80 bg-white border-l border-gray-200 flex flex-col">
+        <div class="p-4 border-b border-gray-200">
+          <h2 class="text-lg font-medium text-gray-900">Your Consultation</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4">
+          <div id="consultation-content">
+            <div class="text-center text-gray-500 py-8">
+              <i class="fas fa-file-medical text-4xl mb-4"></i>
+              <p>Enter your Report ID to view your consultation details</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Gemini AI Configuration
+      const GEMINI_API_KEY = "AIzaSyBNtROSzV8YfiYVzT6EelmxK-tBiJ4J8so"; // Gemini API key
+      const GEMINI_API_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
+             let currentReportData = null;
+       let conversationHistory = [];
+
+             // Call Gemini AI API
+       async function callGeminiAI(userMessage, reportData) {
+         try {
+           const prompt = `You are a comprehensive medical AI assistant for SnapDx, designed to help patients with all aspects of their health consultation. You have access to the patient's diagnosis report and can provide detailed information on various health topics.
+
+PATIENT INFORMATION:
+- Name: ${reportData.patientName}
+- Age: ${reportData.patientAge} years
+- Gender: ${reportData.patientGender}
+
+DIAGNOSIS REPORT:
+- Primary Diagnosis: ${reportData.primaryDiagnosis}
+- Confidence Level: ${reportData.confidence}%
+- Severity: ${reportData.severity}
+- Disease Type: ${reportData.disease_type || 'N/A'}
+- Has Disease: ${reportData.has_disease ? 'Yes' : 'No'}
+- Probability: ${reportData.probability || 'N/A'}
+
+DETECTED CONDITIONS:
+${reportData.detectedConditions.map((condition) => `- ${condition}`).join("\n")}
+
+KEY FINDINGS:
+${reportData.keyFindings.map((finding) => `- ${finding}`).join("\n")}
+
+TREATMENT PLAN:
+${reportData.treatmentSuggestions
+  .map((treatment) => `- ${treatment}`)
+  .join("\n")}
+
+PRECAUTIONS:
+${reportData.precautions.map((precaution) => `- ${precaution}`).join("\n")}
+
+MEDICATIONS:
+${reportData.medications
+  .map(
+    (med) =>
+      `- ${med.name}: ${med.dosage} ${med.frequency} for ${med.duration}. Instructions: ${med.instructions}`
+  )
+  .join("\n")}
+
+PATIENT QUESTION: "${userMessage}"
+
+You are a knowledgeable medical AI that can answer questions about:
+
+1. **Disease Information**: Explain the patient's specific disease, its causes, symptoms, progression, and complications
+2. **Treatment Details**: Provide comprehensive information about treatment options, medications, dosages, side effects, and alternatives
+3. **Lifestyle & Prevention**: Offer advice on diet, exercise, stress management, and preventive measures
+4. **Recovery & Follow-up**: Explain recovery timeline, rehabilitation, follow-up care, and monitoring
+5. **Emergency Situations**: Identify warning signs, when to seek immediate medical attention, and emergency protocols
+6. **General Health**: Answer questions about overall health, wellness, and medical conditions
+7. **Report Interpretation**: Help patients understand their diagnosis report, medical terminology, and test results
+8. **Consultation Guidance**: Provide information about doctor visits, what to expect, and how to prepare
+9. **Medication Management**: Explain how to take medications, interactions, storage, and compliance
+10. **Support & Resources**: Suggest support groups, educational materials, and additional resources
+
+Please provide a comprehensive, helpful, and empathetic response that addresses the patient's question thoroughly. Use clear, simple language while being medically accurate. Always encourage follow-up with their doctor for personalized medical advice. Remember you are providing health information and education, not making new diagnoses.`;
+
+          const response = await fetch(
+            `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: prompt,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (
+            data.candidates &&
+            data.candidates[0] &&
+            data.candidates[0].content
+          ) {
+            return data.candidates[0].content.parts[0].text;
+          } else {
+            throw new Error("Invalid response format from Gemini API");
+          }
+        } catch (error) {
+          console.error("Error calling Gemini AI:", error);
+          // Fallback to local response if API fails
+          return generateFallbackResponse(userMessage, reportData);
+        }
+      }
+
+                          // Enhanced fallback response generator (used if Gemini API fails)
+       function generateFallbackResponse(message, data) {
+         const lowerMessage = message.toLowerCase();
+
+         // Helper function to check if message contains any of the given words
+         function containsAny(message, words) {
+           return words.some(word => message.includes(word));
+         }
+
+         // Enhanced fuzzy matching function to handle typos and variations
+         function fuzzyMatch(message, targetWords) {
+           const words = message.split(' ');
+           return targetWords.some(target => {
+             // Exact match
+             if (message.includes(target)) return true;
+             
+             // Check for similar words (common typos and variations)
+             return words.some(word => {
+               // Remove common suffixes and check similarity
+               const cleanWord = word.replace(/ing$|s$|ed$|er$|ly$|tion$|sion$/, '');
+               const cleanTarget = target.replace(/ing$|s$|ed$|er$|ly$|tion$|sion$/, '');
+               
+               // Check if words are similar (allowing for 1-3 character differences)
+               if (cleanWord.length >= 2 && cleanTarget.length >= 2) {
+                 const similarity = calculateSimilarity(cleanWord, cleanTarget);
+                 return similarity >= 0.6; // 60% similarity threshold for better typo handling
+               }
+               return false;
+             });
+           });
+         }
+
+         // Enhanced similarity calculation (Levenshtein distance based)
+         function calculateSimilarity(str1, str2) {
+           const longer = str1.length > str2.length ? str1 : str2;
+           const shorter = str1.length > str2.length ? str2 : str1;
+           
+           if (longer.length === 0) return 1.0;
+           
+           const distance = levenshteinDistance(longer, shorter);
+           return (longer.length - distance) / longer.length;
+         }
+
+         // Levenshtein distance calculation
+         function levenshteinDistance(str1, str2) {
+           const matrix = [];
+           for (let i = 0; i <= str2.length; i++) {
+             matrix[i] = [i];
+           }
+           for (let j = 0; j <= str1.length; j++) {
+             matrix[0][j] = j;
+           }
+           for (let i = 1; i <= str2.length; i++) {
+             for (let j = 1; j <= str1.length; j++) {
+               if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                 matrix[i][j] = matrix[i - 1][j - 1];
+               } else {
+                 matrix[i][j] = Math.min(
+                   matrix[i - 1][j - 1] + 1,
+                   matrix[i][j - 1] + 1,
+                   matrix[i - 1][j] + 1
+                 );
+               }
+             }
+           }
+           return matrix[str2.length][str1.length];
+         }
+
+         // Enhanced question categorization with better typo handling
+         function categorizeQuestion(message) {
+           const categories = {
+             disease: {
+               keywords: [
+                 "disease", "diagnosis", "what is", "explain", "condition", "problem", "issue",
+                 "symptom", "cause", "why", "how did", "what caused", "what's wrong", "whats wrong",
+                 "disese", "diagnos", "symptom", "symtom", "caus", "problm", "issu", "expln",
+                 "whats", "what is", "how", "why", "when", "where"
+               ],
+               fuzzy: ["disease", "diagnosis", "symptom", "cause", "problem", "condition"]
+             },
+             treatment: {
+               keywords: [
+                 "treatment", "medicine", "medication", "cure", "therapy", "drug", "pill",
+                 "heal", "fix", "remedy", "solution", "help", "what to do", "how to treat",
+                 "treatmnt", "medicin", "medicatn", "cur", "therpy", "drg", "heal", "fix",
+                 "remedy", "solutn", "help", "what to do", "how to treat", "treat", "treating"
+               ],
+               fuzzy: ["treatment", "medicine", "medication", "cure", "therapy", "drug"]
+             },
+             lifestyle: {
+               keywords: [
+                 "precaution", "precautions", "precautionary", "safety", "safe", "protect", "protection",
+                 "careful", "carefully", "watch out", "be careful", "take care", "keep safe", "stay safe",
+                 "avoid", "avoiding", "prevent", "prevention", "preventive", "stop", "stopping",
+                 "care", "caring", "lifestyle", "life style", "daily", "routine", "habit", "habits",
+                 "diet", "food", "eating", "nutrition", "exercise", "workout", "physical", "activity",
+                 "rest", "sleep", "stress", "anxiety", "mental", "emotional", "wellness", "well being",
+                 "precausion", "precausions", "precution", "precutions", "safty", "saftey", "protect",
+                 "carefull", "carefuly", "lifstyle", "diet", "exersize", "excersize", "work out",
+                 "what should i", "what should i do", "how should i", "how can i", "what do i need to",
+                 "what must i", "what can i", "how do i", "how to", "what to", "tips", "advice", "help"
+               ],
+               fuzzy: ["precaution", "safety", "care", "avoid", "prevent", "lifestyle", "diet", "exercise"]
+             },
+             medication: {
+               keywords: [
+                 "dosage", "dose", "how to take", "when to take", "how often", "frequency",
+                 "side effects", "side effect", "reaction", "interactions", "interaction",
+                 "drug", "pill", "medicine", "medication", "prescription", "prescribed",
+                 "instructions", "instruction", "directions", "guidelines", "guideline",
+                 "storage", "store", "keep", "refrigerate", "expiry", "expiration",
+                 "missed dose", "forgot", "skip", "double dose", "overdose",
+                 "dosag", "dos", "how to tak", "when to tak", "how oftn", "freqncy",
+                 "side efects", "side efect", "reactn", "interactns", "interactn",
+                 "drg", "medicin", "medicatn", "prescriptn", "prescribd", "instructns",
+                 "directns", "guidelns", "storag", "stor", "refrigerat", "expiry", "expiratn"
+               ],
+               fuzzy: ["dosage", "dose", "side effects", "interactions", "instructions", "storage"]
+             },
+             emergency: {
+               keywords: [
+                 "emergency", "urgent", "severe", "danger", "warning", "alarm", "critical",
+                 "serious", "bad", "worse", "worsening", "sudden", "immediate", "now",
+                 "help", "help me", "scared", "worried", "concerned", "anxious",
+                 "pain", "hurting", "hurt", "suffering", "symptom", "symptoms",
+                 "breathing", "breath", "chest", "heart", "fever", "temperature",
+                 "confusion", "confused", "dizzy", "dizziness", "weak", "weakness",
+                 "emergncy", "urgnt", "sevr", "dangr", "warnng", "alrm", "critcal",
+                 "serus", "wors", "worsnng", "suddn", "immedate", "hel", "scard", "worrd",
+                 "concernd", "anxus", "pian", "hurtng", "suffrng", "breathng", "breth",
+                 "confusn", "confusd", "dizzy", "diznss", "wek", "weknss"
+               ],
+               fuzzy: ["emergency", "urgent", "severe", "danger", "pain", "help", "breathing"]
+             },
+             recovery: {
+               keywords: [
+                 "recovery", "recovering", "healing", "heal", "better", "improve", "improvement",
+                 "timeline", "time line", "how long", "when will", "duration", "period",
+                 "follow up", "followup", "follow-up", "appointment", "visit", "check up",
+                 "checkup", "monitor", "monitoring", "progress", "getting better", "feeling better",
+                 "back to normal", "normal", "usual", "routine", "daily life", "work", "job",
+                 "exercise", "activity", "sport", "gym", "fitness", "strength", "energy",
+                 "recovry", "recovrng", "healng", "bettr", "improv", "improvmnt", "timeln",
+                 "how lng", "when wil", "duratn", "perod", "follow up", "appointmnt", "vist",
+                 "check up", "monitr", "monitrnng", "progrss", "gettng bettr", "feelng bettr"
+               ],
+               fuzzy: ["recovery", "healing", "better", "improve", "timeline", "follow up"]
+             },
+             general: {
+               keywords: [
+                 "health", "healthy", "wellness", "well being", "wellbeing", "consultation",
+                 "consult", "doctor", "physician", "nurse", "visit", "appointment", "meeting",
+                 "report", "result", "test", "exam", "examination", "scan", "xray", "x-ray",
+                 "blood", "urine", "stool", "sample", "lab", "laboratory", "clinic", "hospital",
+                 "medical", "medicine", "healthcare", "health care", "information", "info",
+                 "understand", "understanding", "explain", "explanation", "what does", "what is this",
+                 "helth", "helthy", "wellnes", "well beng", "consultatn", "conslt", "doctr",
+                 "physicn", "nurs", "vist", "appointmnt", "meetng", "reprot", "rsult", "tst",
+                 "exm", "examinatn", "scn", "xry", "blod", "urin", "stol", "samp", "lbratory",
+                 "clnic", "hospitl", "medcal", "medcin", "helthcare", "informatn", "inf",
+                 "undrstnd", "undrstndng", "expln", "explanatn", "what dos", "what is ths"
+               ],
+               fuzzy: ["health", "wellness", "consultation", "doctor", "report", "medical"]
+             }
+           };
+
+           // Check each category
+           for (const [category, config] of Object.entries(categories)) {
+             if (containsAny(lowerMessage, config.keywords) || fuzzyMatch(lowerMessage, config.fuzzy)) {
+               return category;
+             }
+           }
+           
+           return 'general'; // Default category
+         }
+
+         // Enhanced question handling using categorization
+         const questionCategory = categorizeQuestion(message);
+         
+         switch (questionCategory) {
+           case 'disease':
+             return `Your diagnosis shows ${data.primaryDiagnosis} with ${data.confidence}% confidence. This is a ${data.severity.toLowerCase()} condition that affects the ${data.disease_type || 'respiratory system'}.
+
+Key points about your condition:
+• Severity: ${data.severity}
+• AI Detection: ${data.has_disease ? 'Disease detected' : 'Normal findings'}
+• Confidence Level: ${data.confidence}%
+• Detected Conditions: ${data.detectedConditions.join(', ')}
+
+Common symptoms and progression:
+• Early symptoms may include ${data.keyFindings.slice(0, 3).join(', ')}
+• The condition typically progresses through stages
+• Regular monitoring is essential for proper management
+
+For detailed information about your specific condition, symptoms, and progression, please consult with your doctor.`;
+
+           case 'treatment':
+             return `Your treatment plan for ${data.primaryDiagnosis} includes:
+
+${data.treatmentSuggestions.map((treatment) => `• ${treatment}`).join("\n")}
+
+Medication Details:
+${data.medications.length > 0 ? data.medications.map((med) => `• ${med.name}: ${med.dosage} ${med.frequency} for ${med.duration}`).join("\n") : '• No specific medications prescribed yet'}
+
+Important: Always follow your doctor's prescribed treatment plan and complete the full course of any medications. Never stop treatment early without consulting your doctor.`;
+
+           case 'lifestyle':
+             return `Here are important precautions and lifestyle recommendations for your condition:
+
+${data.precautions.map((precaution) => `• ${precaution}`).join("\n")}
+
+Additional lifestyle tips:
+• Get adequate rest and sleep (7-9 hours per night)
+• Stay hydrated (8-10 glasses of water daily)
+• Avoid smoking and second-hand smoke
+• Follow a balanced diet rich in fruits and vegetables
+• Exercise as recommended by your doctor
+• Manage stress through relaxation techniques
+• Maintain good hygiene practices
+
+These measures will help speed up your recovery and prevent complications.`;
+
+           case 'medication':
+             return `Your medication information:
+
+${data.medications.length > 0 ? data.medications.map((med) => `• ${med.name}: ${med.dosage} ${med.frequency} for ${med.duration}
+  Instructions: ${med.instructions}`).join("\n\n") : '• No medications currently prescribed'}
+
+Important medication guidelines:
+• Take exactly as prescribed by your doctor
+• Don't stop early without consulting your doctor
+• Store medications in a cool, dry place
+• Be aware of potential side effects
+• Ask your doctor about drug interactions
+• Keep track of when you take your medications
+• Don't share medications with others
+
+For specific medication questions, always consult your doctor or pharmacist.`;
+
+           case 'emergency':
+             return `🚨 EMERGENCY WARNING SIGNS - Seek immediate medical attention if you experience:
+
+• Difficulty breathing or shortness of breath
+• Chest pain or pressure
+• High fever (above 103°F/39.4°C)
+• Confusion or disorientation
+• Bluish lips, face, or extremities
+• Severe coughing with blood
+• Rapid heart rate
+• Extreme fatigue or weakness
+• Severe headache or dizziness
+• Loss of consciousness
+
+⚠️ If you experience any of these symptoms:
+1. Call emergency services immediately
+2. Go to the nearest hospital
+3. Don't wait to see if symptoms improve
+4. Bring your medical report with you
+
+These symptoms could indicate complications requiring emergency care.`;
+
+           case 'recovery':
+             return `Recovery and follow-up information for your ${data.primaryDiagnosis}:
+
+Recovery Timeline:
+• Initial improvement: Usually within 3-7 days
+• Full recovery: May take 2-6 weeks depending on severity
+• Follow-up appointments: As scheduled by your doctor
+
+Important follow-up steps:
+• Attend all scheduled appointments
+• Complete prescribed treatments
+• Monitor your symptoms daily
+• Report any new or worsening symptoms
+• Get recommended tests or scans
+• Keep a symptom diary
+• Follow up with specialists if needed
+
+Your doctor will provide a personalized recovery plan based on your specific condition and response to treatment.`;
+
+           case 'general':
+           default:
+             return `I can help you with various aspects of your health consultation and diagnosis report:
+
+Your Current Status:
+• Diagnosis: ${data.primaryDiagnosis}
+• Severity: ${data.severity}
+• Confidence: ${data.confidence}%
+• Patient: ${data.patientName} (${data.patientAge} years, ${data.patientGender})
+
+Available Information:
+• Disease details and progression
+• Treatment options and medications
+• Lifestyle and prevention advice
+• Recovery timeline and follow-up care
+• Emergency warning signs
+• General health and wellness advice
+• Report interpretation and medical terminology
+• Consultation guidance and preparation
+
+What specific aspect would you like to know more about? You can ask about your disease, treatment, lifestyle, recovery, or any other health concerns. I'm here to help you understand your condition and care plan better!`;
+         }
+       }
+
+
+
+             // Fetch report data from API
+       async function fetchReportData(reportId) {
+         try {
+           console.log('Fetching report data for ID:', reportId);
+           
+           // Show loading message
+           addMessage(
+             "bot",
+             `Searching for report ID ${reportId}...`
+           );
+
+           const response = await fetch(`/api/report/${reportId}`, {
+             method: 'GET',
+             headers: {
+               'Content-Type': 'application/json',
+             }
+           });
+
+           console.log('API Response status:', response.status);
+           const data = await response.json();
+           console.log('API Response data:', data);
+
+           if (data.success) {
+             currentReportData = data;
+             displayReportData(data);
+
+             // Add success message
+             addMessage(
+               "bot",
+               `✅ Report ID ${reportId} found! I can now provide you with personalized health advice based on your diagnosis using Gemini AI. What would you like to know about your condition?`
+             );
+           } else {
+             addMessage(
+               "bot",
+               `❌ Sorry, I couldn't find a report with ID ${reportId}. Please check the ID and try again. Make sure you're using the correct Report ID from your diagnosis.`
+             );
+             
+             // Try to get available report IDs for debugging
+             try {
+               const reportsResponse = await fetch('/api/reports/list');
+               const reportsData = await reportsResponse.json();
+               if (reportsData.success && reportsData.reports.length > 0) {
+                 console.log('Available report IDs:', reportsData.reports);
+               }
+             } catch (e) {
+               console.log('Could not fetch available reports list');
+             }
+           }
+         } catch (error) {
+           console.error('Error fetching report:', error);
+           addMessage(
+             "bot",
+             `❌ Sorry, there was an error fetching your report. Please try again or contact support.`
+           );
+         }
+       }
+
+      // Display report data in consultation panel
+      function displayReportData(data) {
+        const consultationContent = document.getElementById(
+          "consultation-content"
+        );
+
+        consultationContent.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Patient Info -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-blue-900 mb-2">Patient Information</h3>
+                        <p class="text-sm text-blue-800"><strong>Name:</strong> ${
+                          data.patientName
+                        }</p>
+                        <p class="text-sm text-blue-800"><strong>Age:</strong> ${
+                          data.patientAge
+                        } years</p>
+                        <p class="text-sm text-blue-800"><strong>Gender:</strong> ${
+                          data.patientGender
+                        }</p>
+                    </div>
+
+                                         <!-- Diagnosis -->
+                     <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                         <h3 class="font-semibold text-green-900 mb-2">Diagnosis</h3>
+                         <p class="text-sm text-green-800"><strong>Primary:</strong> ${
+                           data.primaryDiagnosis
+                         }</p>
+                         <p class="text-sm text-green-800"><strong>Confidence:</strong> ${
+                           data.confidence
+                         }%</p>
+                         <p class="text-sm text-green-800"><strong>Severity:</strong> ${
+                           data.severity
+                         }</p>
+                         <p class="text-sm text-green-800"><strong>Disease Type:</strong> ${
+                           data.disease_type || 'N/A'
+                         }</p>
+                         <p class="text-sm text-green-800"><strong>Has Disease:</strong> ${
+                           data.has_disease ? 'Yes' : 'No'
+                         }</p>
+                     </div>
+                    
+                    <!-- Treatment -->
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-purple-900 mb-2">Treatment Plan</h3>
+                        <ul class="text-sm text-purple-800 space-y-1">
+                            ${data.treatmentSuggestions
+                              .map(
+                                (treatment) =>
+                                  `<li class="flex items-start"><i class="fas fa-check-circle text-purple-600 mr-2 mt-0.5"></i>${treatment}</li>`
+                              )
+                              .join("")}
+                        </ul>
+                    </div>
+                    
+                    <!-- Precautions -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-yellow-900 mb-2">Precautions</h3>
+                        <ul class="text-sm text-yellow-800 space-y-1">
+                            ${data.precautions
+                              .map(
+                                (precaution) =>
+                                  `<li class="flex items-start"><i class="fas fa-exclamation-triangle text-yellow-600 mr-2 mt-0.5"></i>${precaution}</li>`
+                              )
+                              .join("")}
+                        </ul>
+                    </div>
+                    
+                    <!-- Medications -->
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-red-900 mb-2">Medications</h3>
+                        <div class="space-y-3">
+                            ${data.medications
+                              .map(
+                                (med) => `
+                                <div class="border-l-4 border-red-400 pl-3">
+                                    <p class="text-sm font-medium text-red-800">${med.name}</p>
+                                    <p class="text-xs text-red-700">${med.dosage} - ${med.frequency}</p>
+                                    <p class="text-xs text-red-700">Duration: ${med.duration}</p>
+                                    <p class="text-xs text-red-700">Instructions: ${med.instructions}</p>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    </div>
+
+                                         <!-- Doctor Information -->
+                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                         <h3 class="font-semibold text-gray-900 mb-2">Doctor Information</h3>
+                         <p class="text-sm text-gray-800"><strong>Doctor:</strong> ${
+                           data.doctor_name || 'N/A'
+                         }</p>
+                         <p class="text-sm text-gray-800"><strong>Report ID:</strong> ${
+                           data.report_id || 'N/A'
+                         }</p>
+                         <p class="text-sm text-gray-800"><strong>Date:</strong> ${
+                           new Date(data.created_at).toLocaleDateString()
+                         }</p>
+                     </div>
+
+                     <!-- AI Status -->
+                     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                         <h3 class="font-semibold text-indigo-900 mb-2">AI Assistant</h3>
+                         <p class="text-sm text-indigo-800">Powered by Gemini AI</p>
+                         <p class="text-xs text-indigo-700">Providing personalized health advice</p>
+                     </div>
+                 </div>
+             `;
+      }
+
+
+
+      // Add message to chat
+      function addMessage(sender, text) {
+        const messagesContainer = document.getElementById("messages-container");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `flex ${
+          sender === "user" ? "justify-end" : "justify-start"
+        } mb-4`;
+
+        messageDiv.innerHTML = `
+                <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  sender === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-900"
+                }">
+                    <p class="text-sm whitespace-pre-line">${text}</p>
+                </div>
+            `;
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Store in conversation history
+        conversationHistory.push({ sender, text, timestamp: new Date() });
+      }
+
+             // Handle user message with Gemini AI
+       async function handleUserMessage(message) {
+         addMessage("user", message);
+
+         // Debug logging
+         console.log("User message:", message);
+         console.log("Current report data:", currentReportData);
+
+         // Check if this is a report ID (if no report data is loaded yet)
+         if (!currentReportData) {
+           console.log('No report data loaded, checking if message is report ID');
+           console.log('Message:', message);
+           
+           // Check if the message looks like a report ID
+           const reportIdPattern = /^[A-Z0-9]{3,20}$/i; // More flexible pattern for report IDs
+           const isReportId = reportIdPattern.test(message.trim());
+           console.log('Is report ID pattern match:', isReportId);
+           
+           if (isReportId) {
+             // This looks like a report ID, try to fetch it
+             console.log('Attempting to fetch report data...');
+             await fetchReportData(message.trim());
+             return;
+           } else {
+             // Not a report ID, ask for one
+             addMessage("bot", "Please provide your Report ID to start your consultation. Your Report ID should be a combination of letters and numbers (e.g., SNAP1234567890).");
+             return;
+           }
+         }
+
+         // Show typing indicator
+         const typingDiv = document.createElement("div");
+         typingDiv.className = "flex justify-start mb-4";
+         typingDiv.innerHTML = `
+                 <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-200 text-gray-900">
+                     <div class="flex items-center space-x-2">
+                         <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                         <span class="text-sm">Gemini AI is thinking...</span>
+                     </div>
+                 </div>
+             `;
+         document.getElementById("messages-container").appendChild(typingDiv);
+         document.getElementById("messages-container").scrollTop =
+           document.getElementById("messages-container").scrollHeight;
+
+         try {
+           // Call Gemini AI
+           const response = await callGeminiAI(message, currentReportData);
+
+           // Remove typing indicator
+           typingDiv.remove();
+
+           // Add AI response
+           addMessage("bot", response);
+         } catch (error) {
+           // Remove typing indicator
+           typingDiv.remove();
+
+           // Add error message
+           addMessage(
+             "bot",
+             `I apologize, but I'm having trouble connecting to my AI service right now. Please try again in a moment, or contact your doctor for immediate assistance.`
+           );
+
+           console.error("Error getting AI response:", error);
+         }
+       }
+
+      // Handle send button click
+      document
+        .getElementById("send-button")
+        .addEventListener("click", function () {
+          const input = document.getElementById("message-input");
+          const message = input.value.trim();
+
+          if (message) {
+            handleUserMessage(message);
+            input.value = "";
+          }
+        });
+
+      // Handle Enter key in message input
+      document
+        .getElementById("message-input")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            document.getElementById("send-button").click();
+          }
+        });
+    </script>
+
+{% endblock %}

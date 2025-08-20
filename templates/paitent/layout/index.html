@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapDx - {% block title %} {% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <!-- Google AI SDK -->
+    <script src="https://googleapis.dev/nodejs/googleapis/latest/index.js"></script>
+    
+    <script>
+      // Function to update navbar with user information
+      function updateNavbar() {
+        // Get user info from session (this will be populated by Flask)
+        const username = "{{ session.get('name', 'Patient') }}";
+        const userEmail = "{{ session.get('email', 'patient@example.com') }}";
+        const userRole = "{{ session.get('role', 'Patient') }}";
+        
+        // Update the display elements
+        const usernameDisplay = document.getElementById('username-display');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const userRoleDisplay = document.getElementById('user-role-display');
+        
+        if (usernameDisplay) {
+          usernameDisplay.textContent = username;
+        }
+        
+        if (userEmailDisplay) {
+          userEmailDisplay.textContent = userEmail;
+        }
+        
+        if (userRoleDisplay) {
+          userRoleDisplay.textContent = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+        }
+      }
+      
+      // Update navbar when page loads
+      document.addEventListener('DOMContentLoaded', updateNavbar);
+      
+      // Dropdown toggle functionality
+      function toggleDropdown() {
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const dropdownArrow = document.getElementById('dropdown-arrow');
+        
+        if (dropdownMenu.classList.contains('hidden')) {
+          dropdownMenu.classList.remove('hidden');
+          // Trigger animation after removing hidden class
+          setTimeout(() => {
+            dropdownMenu.classList.remove('opacity-0', 'scale-95');
+            dropdownMenu.classList.add('opacity-100', 'scale-100');
+          }, 10);
+          dropdownArrow.style.transform = 'rotate(180deg)';
+        } else {
+          dropdownMenu.classList.add('opacity-0', 'scale-95');
+          dropdownArrow.style.transform = 'rotate(0deg)';
+          // Hide after animation
+          setTimeout(() => {
+            dropdownMenu.classList.add('hidden');
+          }, 200);
+        }
+      }
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        const dropdown = document.getElementById('user-dropdown');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        
+        if (!dropdown.contains(event.target)) {
+          dropdownMenu.classList.add('opacity-0', 'scale-95');
+          document.getElementById('dropdown-arrow').style.transform = 'rotate(0deg)';
+          // Hide after animation
+          setTimeout(() => {
+            dropdownMenu.classList.add('hidden');
+          }, 200);
+        }
+      });
+    </script>
+  </head>
+  <body class="bg-gray-50 h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg absolute w-screen">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <h1 class="text-2xl font-bold text-blue-600">SnapDx</h1>
+            </div>
+          </div>
+          <div class="flex items-center space-x-4">
+            <a
+              href="{{url_for('paitent_chatbot')}}"
+              class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium"
+              >AI Assistant</a
+            >
+            <a
+              href="{{url_for('paitent_chat')}}"
+              class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              >Chat with Doctor</a
+            >
+            <div class="relative" id="user-dropdown">
+              <button
+                class="flex items-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md"
+                onclick="toggleDropdown()"
+              >
+                <div class="relative">
+                  <i class="fas fa-user-circle text-xl mr-2"></i>
+                  <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
+                </div>
+                <span id="username-display">Patient</span>
+                <i class="fas fa-chevron-down ml-1" id="dropdown-arrow"></i>
+              </button>
+              
+              <!-- Dropdown Menu -->
+              <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden border border-gray-200 transition-all duration-200 ease-in-out transform opacity-0 scale-95" id="dropdown-menu">
+                <div class="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
+                  <p class="font-medium" id="user-email-display">patient@example.com</p>
+                  <p class="text-xs text-gray-500" id="user-role-display">Patient</p>
+                </div>
+                <a
+                  href="{{url_for('logout')}}"
+                  class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                >
+                  <i class="fas fa-sign-out-alt mr-2"></i>
+                  Sign Out
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+
+  </body>
+</html>

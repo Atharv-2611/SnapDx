@@ -1,0 +1,307 @@
+{% extends 'doctor/layout/index.html'%}
+{% block title %} 
+Home
+{% endblock %}
+
+
+{% block content %}
+   <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Welcome Section -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Welcome back, {{ user_name }}!</h1>
+                <p class="text-gray-600">Here's what's happening with your patients today.</p>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="px-4 py-6 sm:px-0">
+            <!-- First Row - Main Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-users text-blue-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Patients</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="total-patients-count">
+                                        <div class="animate-pulse bg-gray-200 h-6 w-16 rounded"></div>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Completed Today</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="completed-today-count">
+                                        <div class="animate-pulse bg-gray-200 h-6 w-8 rounded"></div>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Row - Accuracy Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-lungs text-red-600 text-xl"></i>
+                            </div>
+                            <div class="ml-4 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-xs font-medium text-gray-500 truncate">Pneumonia Accuracy</dt>
+                                    <dd class="text-base font-medium text-gray-900">89.26%</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-bacteria text-orange-600 text-xl"></i>
+                            </div>
+                            <div class="ml-4 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-xs font-medium text-gray-500 truncate">Tuberculosis (TB) Accuracy</dt>
+                                    <dd class="text-base font-medium text-gray-900">84.16%</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-allergies text-purple-600 text-xl"></i>
+                            </div>
+                            <div class="ml-4 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-xs font-medium text-gray-500 truncate">Skin Cancer (Melanoma) Accuracy</dt>
+                                    <dd class="text-base font-medium text-gray-900">78.37%</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Patients & Quick Actions -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Recent Patients -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Recent Patients</h3>
+                    </div>
+                    <div class="divide-y divide-gray-200" id="recent-patients-list">
+                        <!-- Loading state -->
+                        <div class="px-6 py-4">
+                            <div class="flex items-center justify-center">
+                                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                <span class="ml-2 text-sm text-gray-500">Loading recent patients...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200">
+                        <a href="{{url_for('doctor_history')}}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            View all patients →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <a href="{{url_for('doctor_diagnose')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                                <i class="fas fa-stethoscope text-blue-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">New Diagnosis</span>
+                            </a>
+                            <a href="{{url_for('doctor_chat')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors">
+                                <i class="fas fa-comments text-green-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">Patient Chat</span>
+                            </a>
+                            <a href="{{url_for('doctor_history')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors">
+                                <i class="fas fa-history text-purple-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">View History</span>
+                            </a>
+                            <a href="{{url_for('doctor_working')}}" class="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-yellow-50 hover:border-yellow-300 transition-colors">
+                                <i class="fas fa-question-circle text-yellow-600 text-2xl mb-2"></i>
+                                <span class="text-sm font-medium text-gray-900">How It Works</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+{% block script %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    // Fetch and display recent patients
+    async function fetchRecentPatients() {
+        try {
+            const response = await fetch('/api/recent-patients');
+            const data = await response.json();
+            
+            const patientsList = document.getElementById('recent-patients-list');
+            
+            if (data.success && data.patients.length > 0) {
+                patientsList.innerHTML = data.patients.map(patient => {
+                    const timeAgo = getTimeAgo(new Date(patient.created_at));
+                    const colorClasses = getColorClasses(patient.has_disease);
+                    
+                    return `
+                        <div class="px-6 py-4 hover:bg-gray-50 cursor-pointer" onclick="viewPatientDetails('${patient._id}')">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full ${colorClasses.bg} flex items-center justify-center">
+                                            <i class="fas fa-user ${colorClasses.text}"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">${patient.patient_name}</div>
+                                        <div class="text-sm text-gray-500">${patient.disease_name} (${patient.disease_type})</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500">${timeAgo}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                patientsList.innerHTML = `
+                    <div class="px-6 py-4">
+                        <div class="flex flex-col items-center text-center">
+                            <i class="fas fa-users text-gray-400 text-2xl mb-2"></i>
+                            <p class="text-sm text-gray-500">No recent patients found</p>
+                            <p class="text-xs text-gray-400">Start by creating your first diagnosis</p>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error fetching recent patients:', error);
+            const patientsList = document.getElementById('recent-patients-list');
+            patientsList.innerHTML = `
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-center text-red-500">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <span class="text-sm">Failed to load recent patients</span>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // Helper function to get time ago
+    function getTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) {
+            return 'Just now';
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        } else {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        }
+    }
+
+    // Helper function to get color classes based on diagnosis
+    function getColorClasses(hasDisease) {
+        if (hasDisease) {
+            return {
+                bg: 'bg-red-100',
+                text: 'text-red-600'
+            };
+        } else {
+            return {
+                bg: 'bg-green-100',
+                text: 'text-green-600'
+            };
+        }
+    }
+
+    // Function to view patient details (redirect to history page)
+    function viewPatientDetails(patientId) {
+        window.location.href = "{{ url_for('doctor_history') }}";
+    }
+
+    // Load recent patients when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchRecentPatients();
+        fetchDoctorStats();
+        
+        // Refresh stats every 30 seconds
+        setInterval(fetchDoctorStats, 30000);
+    });
+    
+    // Fetch and display doctor statistics
+    async function fetchDoctorStats() {
+        try {
+            const response = await fetch('/api/doctor-stats');
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update Total Patients count
+                const totalPatientsElement = document.getElementById('total-patients-count');
+                totalPatientsElement.textContent = data.stats.total_patients.toLocaleString();
+                
+                // Update Completed Today count
+                const completedTodayElement = document.getElementById('completed-today-count');
+                completedTodayElement.textContent = data.stats.completed_today;
+            } else {
+                console.error('Error fetching doctor stats:', data.error);
+                // Show error state
+                const totalPatientsElement = document.getElementById('total-patients-count');
+                const completedTodayElement = document.getElementById('completed-today-count');
+                totalPatientsElement.innerHTML = '<span class="text-red-500">Error</span>';
+                completedTodayElement.innerHTML = '<span class="text-red-500">Error</span>';
+            }
+        } catch (error) {
+            console.error('Error fetching doctor stats:', error);
+            // Show error state
+            const totalPatientsElement = document.getElementById('total-patients-count');
+            const completedTodayElement = document.getElementById('completed-today-count');
+            totalPatientsElement.innerHTML = '<span class="text-red-500">Error</span>';
+            completedTodayElement.innerHTML = '<span class="text-red-500">Error</span>';
+        }
+    }
+</script>
+{% endblock %}
+{% endblock %}

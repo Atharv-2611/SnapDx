@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapDx - {% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+    {% block style %}
+    {% endblock %}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-blue-600">SnapDx</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{{url_for('doctor_home')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                    <a href="{{url_for('doctor_diagnose')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Diagnose</a>
+                    <a href="{{url_for('doctor_history')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">History</a>
+                    <a href="{{url_for('doctor_chat')}}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Chat</a>
+                    <div class="relative">
+                        <button class="flex items-center text-gray-700 hover:text-blue-600" onclick="toggleDropdown()">
+                            <i class="fas fa-user-circle text-xl mr-2"></i>
+                            {{ user_name }}
+                            <i class="fas fa-chevron-down ml-1"></i>
+                        </button>
+                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                            <a href="{{url_for('doctor_home')}}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-home mr-2"></i>Dashboard
+                            </a>
+                            <a href="{{url_for('doctor_about')}}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-info-circle mr-2"></i>About
+                            </a>
+                            <div class="border-t border-gray-100"></div>
+                            <a href="{{url_for('logout')}}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+{% block script %}{% endblock %}
+
+<script>
+function toggleDropdown() {
+    const dropdown = document.getElementById('userDropdown');
+    dropdown.classList.toggle('hidden');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('userDropdown');
+    const button = event.target.closest('button');
+    
+    if (!button || !button.onclick) {
+        dropdown.classList.add('hidden');
+    }
+});
+</script>
+</body>
+</html>

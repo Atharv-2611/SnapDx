@@ -1,0 +1,410 @@
+{% extends "paitent/layout/index.html" %}
+{% block title %}Chat{% endblock %} 
+{% block content %}
+
+<div class="pt-16">
+  <!-- Welcome Header -->
+  <div class="bg-blue-50 border-b border-blue-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-blue-900">Patient Chat</h1>
+        <p class="text-blue-700">Chat with doctors who have diagnosed you</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm text-blue-600">Welcome, {{ user_name }}</p>
+        <p class="text-xs text-blue-500">{{ user_email }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Interface -->
+  <div class="flex h-[calc(100vh-160px)]">
+  <!-- Doctor List Sidebar -->
+  <div class="w-72 bg-white border-r border-gray-200 flex flex-col">
+    <div class="p-4 border-b border-gray-200">
+      <h2 class="text-lg font-medium text-gray-900">Doctors</h2>
+      <div class="mt-2">
+        <input
+          type="text"
+          id="doctor-search"
+          placeholder="Search doctors..."
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+        />
+      </div>
+
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+      <div class="divide-y divide-gray-200" id="doctor-list">
+        <!-- Doctor list items will be populated here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="flex-1 flex flex-col">
+    <!-- Chat Header -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 h-10 w-10">
+            <div
+              class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"
+            >
+              <i class="fas fa-user-md text-blue-600"></i>
+            </div>
+          </div>
+          <div class="ml-4">
+            <h3 class="text-lg font-medium text-gray-900" id="chat-doctor-name">
+              Select a doctor to start chatting
+            </h3>
+            <p class="text-sm text-gray-500" id="chat-doctor-status">Online</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="flex-1 overflow-y-auto p-3 pb-1" id="messages-container">
+      <div class="text-center text-gray-500 mt-8">
+        <i class="fas fa-comments text-4xl mb-4"></i>
+        <p>Select a doctor from the sidebar to start a conversation</p>
+      </div>
+    </div>
+
+    <!-- Message Input -->
+    <div class="bg-white border-t border-gray-200 px-4 py-2">
+      <div class="flex items-center space-x-4">
+        <button class="p-2 text-gray-400 hover:text-gray-600">
+          <i class="fas fa-paperclip"></i>
+        </button>
+        <div class="flex-1">
+          <input
+            type="text"
+            id="message-input"
+            placeholder="Type your message..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            disabled
+          />
+        </div>
+        <button
+          id="send-button"
+          class="p-2 text-gray-400 hover:text-gray-600"
+          disabled
+        >
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+        <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const patientEmail = "{{ user_email }}";
+  let currentDoctorEmail = null;
+  let doctors = [];
+  let currentRoomId = null;
+  const socket = io();
+
+  function populateDoctorList() {
+    const doctorList = document.getElementById("doctor-list");
+    doctorList.innerHTML = doctors.map(doctor => `
+      <div class="p-3 hover:bg-gray-50 cursor-pointer border-l-4 border-transparent ${doctor.doctor_email === currentDoctorEmail ? 'border-blue-500 bg-blue-50' : ''}"
+           onclick="selectDoctor('${doctor.doctor_email}')">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 h-8 w-8">
+            <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <span class="text-xs font-medium text-blue-600">${(doctor.doctor_name||'D').charAt(0)}</span>
+            </div>
+          </div>
+          <div class="ml-2">
+            <p class="text-sm font-medium text-gray-900">Dr. ${doctor.doctor_name||'Unknown Doctor'}</p>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function selectDoctor(doctorEmail) {
+    currentDoctorEmail = doctorEmail;
+    const doctor = doctors.find(d => d.doctor_email === doctorEmail);
+    populateDoctorList();
+    document.getElementById("chat-doctor-name").textContent = doctor.doctor_name || 'Unknown Doctor';
+    document.getElementById("chat-doctor-status").textContent = '';
+    document.getElementById("message-input").disabled = false;
+    document.getElementById("send-button").disabled = false;
+    
+    // Use consistent room ID generation - same as doctor side
+    const roomId = `${doctorEmail.toLowerCase()}__${patientEmail.toLowerCase()}`;
+    joinRoom(roomId);
+    loadHistory(roomId);
+  }
+
+  function joinRoom(roomId) {
+    console.log(`Patient joining room: ${roomId}`);
+    if (currentRoomId && currentRoomId !== roomId) {
+      console.log(`Patient leaving previous room: ${currentRoomId}`);
+      socket.emit('leave', { room_id: currentRoomId });
+    }
+    currentRoomId = roomId;
+    socket.emit('join', { room_id: roomId });
+    console.log(`Patient joined room: ${roomId}`);
+  }
+
+  async function loadHistory(roomId) {
+    const messagesContainer = document.getElementById("messages-container");
+    messagesContainer.innerHTML = '<div class="text-center text-gray-500">Loading messages...</div>';
+    try {
+      const res = await fetch(`/api/messages?room_id=${encodeURIComponent(roomId)}`);
+      const data = await res.json();
+      if (data.success) {
+        renderMessages(data.messages || []);
+      } else {
+        messagesContainer.innerHTML = '<div class="text-center text-red-500">Failed to load messages</div>';
+      }
+    } catch (e) {
+      messagesContainer.innerHTML = '<div class="text-center text-red-500">Failed to load messages</div>';
+    }
+  }
+
+  function renderMessages(messages) {
+    const messagesContainer = document.getElementById("messages-container");
+    if (!messages.length) {
+      messagesContainer.innerHTML = `
+        <div class="text-center text-gray-500 mt-8">
+          <i class="fas fa-comments text-4xl mb-4"></i>
+          <p>No messages yet. Start the conversation!</p>
+        </div>`;
+      return;
+    }
+    messagesContainer.innerHTML = messages.map(m => messageBubble(m)).join('');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function messageBubble(m) {
+    const isMe = m.sender_email && m.sender_email.toLowerCase() === patientEmail.toLowerCase();
+    const ts = m.timestamp ? formatTimestamp(new Date(m.timestamp)) : '';
+    const isTemp = m.is_temp;
+    
+    return `
+      <div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-3" ${isTemp ? 'data-temp-message="true"' : ''}>
+        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'} ${isTemp ? 'opacity-75' : ''}">
+          <p class="text-sm">${escapeHtml(m.text || '')}</p>
+          <p class="text-xs ${isMe ? 'text-blue-100' : 'text-gray-500'} mt-1">
+            ${isTemp ? 'Sending...' : ts}
+          </p>
+        </div>
+      </div>`;
+  }
+
+  function formatTimestamp(date) {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>\"]+/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("message-input");
+    const text = input.value.trim();
+    if (!text || !currentRoomId) return;
+    
+    // Create message data
+    const messageData = {
+      room_id: currentRoomId,
+      text,
+      sender_email: patientEmail,
+      sender_role: 'patient',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(`Patient sending message to room: ${currentRoomId}`, messageData);
+    
+    // Create temporary message with loading state
+    const tempMessageId = 'temp_' + Date.now();
+    const tempMessageData = {
+      ...messageData,
+      temp_id: tempMessageId,
+      is_temp: true
+    };
+    
+    // Add temporary message to UI
+    const container = document.getElementById('messages-container');
+    container.insertAdjacentHTML('beforeend', messageBubble(tempMessageData));
+    container.scrollTop = container.scrollHeight;
+    
+    // Clear input immediately
+    input.value = '';
+    
+    // Send via socket
+    socket.emit('chat_message', messageData);
+    
+    // Set timeout to remove temp message if no response
+    setTimeout(() => {
+      const tempMessages = document.querySelectorAll('[data-temp-message]');
+      tempMessages.forEach(tempMsg => {
+        if (tempMsg.querySelector('p').textContent === text) {
+          tempMsg.remove();
+        }
+      });
+    }, 10000); // 10 seconds timeout
+  }
+
+  socket.on('chat_message', (m) => {
+    console.log(`Patient received message:`, m);
+    if (m.room_id !== currentRoomId) {
+      console.log(`Message room_id (${m.room_id}) doesn't match current room (${currentRoomId}), ignoring`);
+      return;
+    }
+    
+    // Check if this is our own message (to replace temp message)
+    const isOwnMessage = m.sender_email && m.sender_email.toLowerCase() === patientEmail.toLowerCase();
+    
+    if (isOwnMessage) {
+      // Remove any temporary messages for this text
+      const tempMessages = document.querySelectorAll('[data-temp-message]');
+      tempMessages.forEach(tempMsg => {
+        if (tempMsg.querySelector('p').textContent === m.text) {
+          tempMsg.remove();
+        }
+      });
+    }
+    
+    console.log(`Patient displaying message in room: ${currentRoomId}`);
+    const container = document.getElementById('messages-container');
+    container.insertAdjacentHTML('beforeend', messageBubble(m));
+    container.scrollTop = container.scrollHeight;
+  });
+
+  // Show typing indicator when doctor is typing
+  socket.on('typing', (data) => {
+    if (data.room_id !== currentRoomId) return;
+    showTypingIndicator('Doctor is typing...');
+  });
+
+  socket.on('stop_typing', (data) => {
+    if (data.room_id !== currentRoomId) return;
+    hideTypingIndicator();
+  });
+
+  // Add typing indicator functions
+  function showTypingIndicator(message) {
+    let typingDiv = document.getElementById('typing-indicator');
+    if (!typingDiv) {
+      typingDiv = document.createElement('div');
+      typingDiv.id = 'typing-indicator';
+      typingDiv.className = 'flex justify-start mb-3';
+      typingDiv.innerHTML = `
+        <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-200 text-gray-900">
+          <div class="flex items-center space-x-2">
+            <div class="flex space-x-1">
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+              <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            </div>
+            <span class="text-sm text-gray-600">${message}</span>
+          </div>
+        </div>
+      `;
+      document.getElementById('messages-container').appendChild(typingDiv);
+    }
+    typingDiv.style.display = 'block';
+    document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
+  }
+
+  function hideTypingIndicator() {
+    const typingDiv = document.getElementById('typing-indicator');
+    if (typingDiv) {
+      typingDiv.style.display = 'none';
+    }
+  }
+
+  // Emit typing events
+  let typingTimer;
+  document.getElementById('message-input').addEventListener('input', function() {
+    if (currentRoomId) {
+      socket.emit('typing', { room_id: currentRoomId });
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        socket.emit('stop_typing', { room_id: currentRoomId });
+      }, 1000);
+    }
+  });
+
+  async function loadDoctors() {
+    try {
+      console.log('Loading doctors for patient...');
+      const res = await fetch('/api/chat-doctors');
+      const data = await res.json();
+      console.log('Response from /api/chat-doctors:', data);
+      
+      if (data.success) {
+        doctors = data.doctors || [];
+        console.log(`Loaded ${doctors.length} doctors:`, doctors);
+        populateDoctorList();
+      } else {
+        console.error('Failed to load doctors', data.error);
+        // Show error message to user
+        const doctorList = document.getElementById("doctor-list");
+        doctorList.innerHTML = `
+          <div class="p-4">
+            <div class="flex flex-col items-center text-center text-red-500">
+              <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+              <p class="text-sm">Failed to load doctors: ${data.error}</p>
+              <p class="text-xs text-gray-500 mt-1">You may not have any diagnoses yet</p>
+            </div>
+          </div>
+        `;
+      }
+    } catch (e) {
+      console.error('Failed to load doctors', e);
+      // Show error message to user
+      const doctorList = document.getElementById("doctor-list");
+      doctorList.innerHTML = `
+        <div class="p-4">
+          <div class="flex flex-col items-center text-center text-red-500">
+            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+            <p class="text-sm">Failed to load doctors</p>
+            <p class="text-xs text-gray-500 mt-1">Please try again later</p>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Event listeners
+  document.getElementById("send-button").addEventListener("click", sendMessage);
+  document.getElementById("message-input").addEventListener("keypress", function (e) {
+    if (e.key === "Enter") sendMessage();
+  });
+  document.getElementById("doctor-search").addEventListener("input", function() {
+    const searchTerm = this.value.toLowerCase();
+    const filtered = doctors.filter(d => (d.doctor_name||'').toLowerCase().includes(searchTerm) || (d.doctor_email||'').toLowerCase().includes(searchTerm));
+    const backup = doctors;
+    doctors = filtered;
+    populateDoctorList();
+    doctors = backup;
+  });
+
+
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', loadDoctors);
+</script>
+
+{% endblock %}
